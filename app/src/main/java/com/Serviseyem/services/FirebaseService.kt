@@ -17,7 +17,18 @@ object FirebaseService {
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings
 
-    private val _supervisorsList = MutableStateFlow<List<SupervisorUser>>(emptyList())
+    private val _supervisorsList = MutableStateFlow<List<SupervisorUser>>(
+        listOf(
+            SupervisorUser(
+                id = "default_wam",
+                phone = "777644670",
+                name = "المالك العام",
+                password = "123",
+                isApproved = true,
+                notes = "حساب افتراضي للمالك العام"
+            )
+        )
+    )
     val supervisorsList: StateFlow<List<SupervisorUser>> = _supervisorsList
 
     private val _providersList = MutableStateFlow<List<ServiceProvider>>(emptyList())
@@ -91,14 +102,25 @@ object FirebaseService {
                 }
                 if (snapshot != null) {
                     val list = mutableListOf<SupervisorUser>()
+                    // Always guarantee the master supervisor is present
+                    list.add(SupervisorUser(
+                        id = "default_wam",
+                        phone = "777644670",
+                        name = "المالك العام",
+                        password = "123",
+                        isApproved = true,
+                        notes = "حساب افتراضي للمالك العام"
+                    ))
                     for (doc in snapshot) {
                         val user = doc.toObject(SupervisorUser::class.java)
-                        list.add(user.copy(id = doc.id))
+                        if (user.phone != "777644670") {
+                            list.add(user.copy(id = doc.id))
+                        }
                     }
                     _supervisorsList.value = list
                     
-                    // Seed default super supervisor if empty
-                    if (list.isEmpty()) {
+                    // Seed default super supervisor if empty in database
+                    if (snapshot.isEmpty) {
                         val defaultSuper = SupervisorUser(
                             id = "default_wam",
                             phone = "777644670",

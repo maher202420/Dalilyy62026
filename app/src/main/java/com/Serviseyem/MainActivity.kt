@@ -81,178 +81,152 @@ class MainActivity : ComponentActivity() {
                     cursorColor = Color(0xFFD4AF37)
                 )
 
-                Scaffold(
-                    topBar = {
-                        // Brand crown visual header
-                        TopAppBar(
-                            title = {
-                                Text(
-                                    text = settings.appNameAr,
-                                    color = Color(0xFFD4AF37),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
-                            },
-                            actions = {
-                                IconButton(onClick = { navController.navigate("about") }) {
-                                    Icon(Icons.Default.Info, contentDescription = "About", tint = Color.White)
-                                }
-                                IconButton(onClick = { navController.navigate("chat") }) {
-                                    Icon(Icons.Default.Chat, contentDescription = "Chat", tint = Color.White)
-                                }
-                                IconButton(
-                                    onClick = { 
-                                        if (FirebaseService.currentSupervisor != null) {
-                                            navController.navigate("admin")
-                                        } else {
-                                            showLoginDialog = true 
-                                        }
-                                    },
-                                    modifier = Modifier.testTag("admin_login_trigger")
-                                ) {
-                                    Icon(
-                                        imageVector = if (FirebaseService.currentSupervisor != null) Icons.Default.AdminPanelSettings else Icons.Default.Lock,
-                                        contentDescription = "Admin lock icon",
-                                        tint = if (FirebaseService.currentSupervisor != null) Color(0xFFD4AF37) else Color.White
-                                    )
-                                }
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                        )
-                    },
-                    modifier = Modifier.fillMaxSize()
-                ) { innerPadding ->
-                    Box(modifier = Modifier.padding(innerPadding)) {
-                        NavHost(navController = navController, startDestination = "main") {
-                            composable("main") {
-                                MainScreen(
-                                    onNavigateToRegister = { navController.navigate("register") },
-                                    onNavigateToChat = { navController.navigate("chat") },
-                                    onNavigateToAbout = { navController.navigate("about") },
-                                    onOpenLoginDialog = { showLoginDialog = true }
-                                )
-                            }
-                            composable("register") {
-                                RegisterProviderScreen(
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable("admin") {
-                                AdminDashboardScreen(
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable("chat") {
-                                ChatScreen(
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable("about") {
-                                AboutScreen(
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
-                            }
-                        }
-                    }
-
-                    // --- Supervisor/Admin Login Dialog ---
-                    if (showLoginDialog) {
-                        Dialog(onDismissRequest = { showLoginDialog = false }) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                                border = BorderStroke(1.dp, Color(0xFFD4AF37))
+                // --- Supervisor/Admin Login Dialog ---
+                if (showLoginDialog) {
+                    Dialog(onDismissRequest = { showLoginDialog = false }) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                            border = BorderStroke(1.dp, Color(0xFFD4AF37))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(20.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                                Icon(Icons.Default.AdminPanelSettings, contentDescription = "Logo", tint = Color(0xFFD4AF37), modifier = Modifier.size(48.dp))
+                                
+                                Text(
+                                    text = "تسجيل دخول مشرف: دليل WAM",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                Text(
+                                    text = "المزامنة سريعة وتلقائية بالكامل بين جميع الأجهزة.",
+                                    color = Color.LightGray,
+                                    fontSize = 11.sp,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                OutlinedTextField(
+                                    value = loginPhone,
+                                    onValueChange = { loginPhone = it },
+                                    label = { Text("اسم المشرف أو رقم الهاتف") },
+                                    modifier = Modifier.fillMaxWidth().testTag("login_phone_input"),
+                                    colors = highContrastTextFieldColors,
+                                    singleLine = true
+                                )
+
+                                OutlinedTextField(
+                                    value = loginPass,
+                                    onValueChange = { loginPass = it },
+                                    label = { Text("رمز الدخول السري") },
+                                    modifier = Modifier.fillMaxWidth().testTag("login_password_input"),
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    colors = highContrastTextFieldColors,
+                                    singleLine = true
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Icon(Icons.Default.AdminPanelSettings, contentDescription = "Logo", tint = Color(0xFFD4AF37), modifier = Modifier.size(48.dp))
-                                    
-                                    Text(
-                                        text = "تسجيل دخول مشرف: دليل WAM",
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        fontSize = 16.sp,
-                                        textAlign = TextAlign.Center
-                                    )
-                                    
-                                    Text(
-                                        text = "المزامنة سريعة وتلقائية بالكامل بين جميع الأجهزة.",
-                                        color = Color.LightGray,
-                                        fontSize = 11.sp,
-                                        textAlign = TextAlign.Center
-                                    )
-
-                                    OutlinedTextField(
-                                        value = loginPhone,
-                                        onValueChange = { loginPhone = it },
-                                        label = { Text("رقم هاتف المشرف المعتمد") },
-                                        modifier = Modifier.fillMaxWidth().testTag("login_phone_input"),
-                                        colors = highContrastTextFieldColors,
-                                        singleLine = true
-                                    )
-
-                                    OutlinedTextField(
-                                        value = loginPass,
-                                        onValueChange = { loginPass = it },
-                                        label = { Text("رمز الدخول السري") },
-                                        modifier = Modifier.fillMaxWidth().testTag("login_password_input"),
-                                        visualTransformation = PasswordVisualTransformation(),
-                                        colors = highContrastTextFieldColors,
-                                        singleLine = true
-                                    )
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Button(
-                                            onClick = {
-                                                if (loginPhone.isEmpty() || loginPass.isEmpty()) {
-                                                    Toast.makeText(context, "يرجى ملء جميع الحقول أولاً", Toast.LENGTH_SHORT).show()
-                                                    return@Button
-                                                }
-                                                // Validate instantly against snapshot list from Firestore supervisors collection
-                                                val found = FirebaseService.supervisorsList.value.firstOrNull {
+                                    Button(
+                                        onClick = {
+                                            if (loginPhone.isEmpty() || loginPass.isEmpty()) {
+                                                Toast.makeText(context, "يرجى ملء جميع الحقول أولاً", Toast.LENGTH_SHORT).show()
+                                                return@Button
+                                            }
+                                            // Robust match supporting "admin"/"777644670" user with "123" master password
+                                            val isMasterAdmin = (loginPhone.trim() == "admin" || loginPhone.trim() == "777644670") && loginPass.trim() == "123"
+                                            val found = if (isMasterAdmin) {
+                                                com.Serviseyem.models.SupervisorUser(
+                                                    id = "default_wam",
+                                                    phone = "777644670",
+                                                    name = "المالك العام",
+                                                    password = "123",
+                                                    isApproved = true,
+                                                    notes = "الدخول الافتراضي للمالك العام"
+                                                )
+                                            } else {
+                                                FirebaseService.supervisorsList.value.firstOrNull {
                                                     it.phone == loginPhone.trim() && it.password == loginPass.trim()
                                                 }
-                                                if (found != null) {
-                                                    FirebaseService.currentSupervisor = found
-                                                    showLoginDialog = false
-                                                    loginPhone = ""
-                                                    loginPass = ""
-                                                    Toast.makeText(context, "مرحباً بك مجدداً كمشرف: ${found.name} 👑", Toast.LENGTH_LONG).show()
-                                                    navController.navigate("admin")
-                                                } else {
-                                                    Toast.makeText(context, "يرجى التحقق من صحة رقم الهاتف والمزامنة السحابية", Toast.LENGTH_LONG).show()
-                                                }
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
-                                            modifier = Modifier.weight(1.2f)
-                                        ) {
-                                            Text("دخول سريع", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                        }
-
-                                        Button(
-                                            onClick = { 
+                                            }
+                                            if (found != null) {
+                                                FirebaseService.currentSupervisor = found
                                                 showLoginDialog = false
                                                 loginPhone = ""
                                                 loginPass = ""
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Text("إلغاء", color = Color.White, fontSize = 12.sp)
-                                        }
+                                                Toast.makeText(context, "مرحباً بك مجدداً كمشرف: ${found.name} 👑", Toast.LENGTH_LONG).show()
+                                                navController.navigate("admin")
+                                            } else {
+                                                Toast.makeText(context, "يرجى التحقق من صحة رقم الهاتف والمزامنة السحابية", Toast.LENGTH_LONG).show()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
+                                        modifier = Modifier.weight(1.2f)
+                                    ) {
+                                        Text("دخول سريع", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+
+                                    Button(
+                                        onClick = { 
+                                            showLoginDialog = false
+                                            loginPhone = ""
+                                            loginPass = ""
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("إلغاء", color = Color.White, fontSize = 12.sp)
                                     }
                                 }
                             }
                         }
+                    }
+                }
+
+                // Main NavHost with NO global double topBar Scaffold
+                NavHost(
+                    navController = navController, 
+                    startDestination = "main",
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    composable("main") {
+                        MainScreen(
+                            onNavigateToRegister = { navController.navigate("register") },
+                            onNavigateToChat = { navController.navigate("chat") },
+                            onNavigateToAbout = { navController.navigate("about") },
+                            onOpenLoginDialog = { showLoginDialog = true },
+                            onNavigateToAdmin = { navController.navigate("admin") }
+                        )
+                    }
+                    composable("register") {
+                        RegisterProviderScreen(
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("admin") {
+                        AdminDashboardScreen(
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("chat") {
+                        ChatScreen(
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("about") {
+                        AboutScreen(
+                            onNavigateBack = { navController.popBackStack() }
+                        )
                     }
                 }
             }

