@@ -152,7 +152,7 @@ fun ChatScreen(
 
                         Box(
                             modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = if (isMine) Alignment.CenterLeft else Alignment.CenterRight
+                            contentAlignment = if (isMine) Alignment.CenterStart else Alignment.CenterEnd
                         ) {
                             Card(
                                 shape = RoundedCornerShape(

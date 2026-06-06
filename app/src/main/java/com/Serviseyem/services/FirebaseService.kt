@@ -77,7 +77,7 @@ object FirebaseService {
                         val item = doc.toObject(ServiceItem::class.java)
                         items.add(item.copy(id = doc.id))
                     }
-                    _servicesList.value = items.sortedByDescending { it.isPinned }.thenBy { it.dateAdded }
+                    _servicesList.value = items.sortedWith(compareByDescending<ServiceItem> { it.isPinned }.thenBy { it.dateAdded })
                 }
             }
 
