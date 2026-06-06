@@ -35,30 +35,72 @@ fun WAMServicesTheme(
     val settingsState = FirebaseService.settings.collectAsState()
     val settings = settingsState.value
 
-    val primaryDynamic = parseHexColor(settings.primaryColor, GoldLuxury)
-    val secondaryDynamic = parseHexColor(settings.secondaryColor, EmeraldMedium)
-    val bgDynamic = parseHexColor(settings.baseCanvasColor, EmeraldDark)
+    // Define the 3 dynamic palettes
+    var primaryColor = Color(0xFFD4AF37)
+    var secondaryColor = Color(0xFF064E3B)
+    var bgColor = Color(0xFF042F2E)
+    var surfaceColor = Color(0xFF0B3F37)
+    var surfaceVariantColor = Color(0xFF0D4F46)
+
+    when (settings.themeName) {
+        "cosmic" -> {
+            primaryColor = Color(0xFF94A3B8) // Cosmic Silver
+            secondaryColor = Color(0xFF475569) // Dark Slate
+            bgColor = Color(0xFF0F172A) // Slate Deep Dark
+            surfaceColor = Color(0xFF1E293B) // Slate Card Background
+            surfaceVariantColor = Color(0xFF334155) // Slate accent info
+        }
+        "charcoal_gold" -> {
+            primaryColor = Color(0xFFD4AF37) // Luxury Gold
+            secondaryColor = Color(0xFF262626) // Deep Charcoal Accent
+            bgColor = Color(0xFF111111) // Absolute Dark Charcoal
+            surfaceColor = Color(0xFF262626) // Card back
+            surfaceVariantColor = Color(0xFF1A1A1A) // Variant
+        }
+        "royal_emerald" -> {
+            primaryColor = Color(0xFF10B981) // Emerald Mint
+            secondaryColor = Color(0xFF064E3B) // Royal Deep Sage
+            bgColor = Color(0xFF022C22) // Meadow Deep Dark
+            surfaceColor = Color(0xFF065F46) // Emerald Card Background
+            surfaceVariantColor = Color(0xFF047857) // Accent
+        }
+        else -> {
+            // Default Emerald Gold
+            primaryColor = parseHexColor(settings.primaryColor, Color(0xFFD4AF37))
+            secondaryColor = parseHexColor(settings.secondaryColor, Color(0xFF064E3B))
+            bgColor = parseHexColor(settings.baseCanvasColor, Color(0xFF042F2E))
+            surfaceColor = Color(0xFF0D4F46)
+            surfaceVariantColor = Color(0xFF0B3F37)
+        }
+    }
 
     // Rich luxury dark color scheme
     val colorScheme = darkColorScheme(
-        primary = primaryDynamic,
-        secondary = secondaryDynamic,
-        tertiary = CosmicSilver,
-        background = bgDynamic,
-        surface = EmeraldLight,
+        primary = primaryColor,
+        secondary = secondaryColor,
+        background = bgColor,
+        surface = surfaceColor,
         onPrimary = Color.Black,
         onSecondary = Color.White,
-        onTertiary = Color.Black,
-        onBackground = Color.White,
-        onSurface = Color.White,
-        primaryContainer = secondaryDynamic,
+        onBackground = getTextColor(settings.textColorOption),
+        onSurface = getTextColor(settings.textColorOption),
+        primaryContainer = secondaryColor,
         onPrimaryContainer = Color.White,
-        surfaceVariant = Color(0xFF0B3F37),
-        onSurfaceVariant = Color(0xFFE5E5EA)
+        surfaceVariant = surfaceVariantColor,
+        onSurfaceVariant = Color.White
     )
 
     MaterialTheme(
         colorScheme = colorScheme,
         content = content
     )
+}
+
+fun getTextColor(textColorOption: String): Color {
+    return when (textColorOption) {
+        "bright_white" -> Color(0xFFFFFFFF)
+        "light_gold" -> Color(0xFFFDE047)
+        "vibrant_silver" -> Color(0xFFCBD5E1)
+        else -> Color(0xFFFFFFFF)
+    }
 }

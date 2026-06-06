@@ -47,11 +47,14 @@ fun MainScreen(
     val context = LocalContext.current
     val services by FirebaseService.servicesList.collectAsState()
     val settings by FirebaseService.settings.collectAsState()
+    val categoriesFromDb by FirebaseService.categoriesList.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("الكل") }
 
-    val categories = listOf("الكل", "VIP حكومية", "خدمات إلكترونية", "دعم فني", "عقارية وتجارية")
+    // Dynamic categories list from Firebase
+    val mainCategories = categoriesFromDb.filter { it.parentId.isEmpty() }.map { it.nameAr }
+    val categories = listOf("الكل") + mainCategories
 
     // Filter services list in real-time
     val filteredServices = services.filter { service ->
@@ -65,59 +68,16 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = settings.appNameAr,
-                        color = Color(0xFFD4AF37),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
+            WamTopBar(
+                titleText = settings.appNameAr,
+                onNavigateHome = {
+                    Toast.makeText(context, "أنت بالفعل على الشاشة الرئيسية 🏠", Toast.LENGTH_SHORT).show()
                 },
-                actions = {
-                    // Home icon to navigate/reset home
-                    IconButton(onClick = {
-                        Toast.makeText(context, "أنت بالفعل في الشاشة الرئيسية 🏠", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Icon(Icons.Default.Home, contentDescription = "Home", tint = Color(0xFFD4AF37))
-                    }
-                    
-                    // Manual database sync/refresh button
-                    IconButton(onClick = {
-                        FirebaseService.startRealtimeSynchronization()
-                        Toast.makeText(context, "تمت إعادة المزامنة والتحديث فوراً بنجاح 🟢", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Icon(Icons.Default.Sync, contentDescription = "Sync", tint = Color.White)
-                    }
-
-                    // Admin lock login button
-                    IconButton(onClick = {
-                        if (FirebaseService.currentSupervisor != null) {
-                            onNavigateToAdmin()
-                        } else {
-                            onOpenLoginDialog()
-                        }
-                    }) {
-                        Icon(
-                            imageVector = if (FirebaseService.currentSupervisor != null) Icons.Default.AdminPanelSettings else Icons.Default.Lock,
-                            contentDescription = "Admin Log",
-                            tint = if (FirebaseService.currentSupervisor != null) Color(0xFFD4AF37) else Color.White
-                        )
-                    }
-
-                    // Quick join register button
-                    IconButton(onClick = onNavigateToRegister) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = "Register", tint = Color.White)
-                    }
-
-                    // Language selector
-                    IconButton(onClick = {
-                        Toast.makeText(context, "اللغة الحالية: العربية 🇾🇪", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Icon(Icons.Default.Language, contentDescription = "Language", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                onNavigateToRegister = onNavigateToRegister,
+                onNavigateToAdmin = onNavigateToAdmin,
+                onRefresh = {
+                    Toast.makeText(context, "تم تحديث البيانات من الخادم السحابي للمشرفين 🔄", Toast.LENGTH_SHORT).show()
+                }
             )
         },
         modifier = Modifier.fillMaxSize()
@@ -128,38 +88,156 @@ fun MainScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            
-            // Premium Gold/Teal Header Banner
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFF042F2E),
-                                MaterialTheme.colorScheme.surfaceVariant
+            // Maintenance mode overlay
+            val isSupervisorLoggedIn = FirebaseService.currentSupervisor != null
+            if (settings.isMaintenanceMode && !isSupervisorLoggedIn) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Build,
+                                contentDescription = "Maintenance",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(72.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "تنبيه الصيانة الإدارية سحابة WAM",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 18.sp,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = settings.maintenanceMessage,
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 20.sp
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Text(
+                                text = "يمكن للمشرفين والمالكين الضغط على أيقونة 🏠 5 مرات لتسجيل الدخول الفوري والتحكم.",
+                                color = Color.LightGray,
+                                fontSize = 11.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Sponsored Ad Banner at top if visible
+                if (settings.sponsoredAdVisible) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 10.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)),
+                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Campaign,
+                                    contentDescription = "Campaign",
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        "إعلان ممول فاخر VIP ✨",
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontSize = 11.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .background(Color.Red, RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            settings.sponsoredAdType,
+                                            color = Color.White,
+                                            fontSize = 7.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = settings.sponsoredAdText,
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Premium Gold/Teal Header Banner
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF042F2E),
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                )
                             )
                         )
-                    )
-                    .padding(horizontal = 16.dp, vertical = 20.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = settings.appNameAr,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFD4AF37),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = settings.welcomeMsg,
-                        fontSize = 14.sp,
-                        color = Color.LightGray,
-                        textAlign = TextAlign.Center
-                    )
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = settings.appNameAr,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = settings.welcomeMsg,
+                            fontSize = 13.sp,
+                            color = Color.LightGray,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
-            }
 
             // Real-time info card / Pinned Banner
             Card(
@@ -335,6 +413,7 @@ fun MainScreen(
                     }
                 }
             }
+        }
 
             // Bottom Action buttons
             Row(
@@ -347,8 +426,8 @@ fun MainScreen(
                 // Join as provider button
                 Button(
                     onClick = onNavigateToRegister,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF064E3B)),
-                    border = BorderStroke(1.dp, Color(0xFFD4AF37)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .weight(1f)
@@ -356,7 +435,7 @@ fun MainScreen(
                         .padding(horizontal = 4.dp)
                         .testTag("join_platform_btn")
                 ) {
-                    Icon(Icons.Default.Engineering, contentDescription = "Provider", tint = Color(0xFFD4AF37))
+                    Icon(Icons.Default.Engineering, contentDescription = "Provider", tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("سجل كمقدم خدمة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
@@ -364,7 +443,7 @@ fun MainScreen(
                 // Smart chat system button
                 Button(
                     onClick = onNavigateToChat,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .weight(1f)
@@ -378,77 +457,87 @@ fun MainScreen(
                 }
             }
 
-            // High Contrast 3-part Footer Bar at Very Bottom
+            // High Contrast 3-part Footer Bar at Very Bottom (Fully Customizable per Admin request)
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(width = 0.5.dp, color = Color(0xFFD4AF37).copy(alpha = 0.3f)),
-                color = Color(0xFF042F2E)
+                    .border(width = 0.5.dp, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 1. Version
-                    Text(
-                        text = "V2.6.2026",
-                        color = Color.LightGray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // 1. Left: Dynamic Info Icon
+                    if (settings.infoIconVisible) {
+                        IconButton(
+                            onClick = onNavigateToAbout,
+                            modifier = Modifier.size(settings.infoIconSize.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "About",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size((settings.infoIconSize - 4).coerceAtLeast(14).dp)
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(settings.infoIconSize.dp))
+                    }
 
-                    // 2. Clickable Backdoor Secret Entry (5 clicks login)
-                    var secretClickCount by remember { mutableStateOf(0) }
-                    Text(
-                        text = settings.footerText,
-                        color = Color(0xFFD4AF37),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier
-                            .clickable {
-                                secretClickCount++
-                                if (secretClickCount >= 5) {
-                                    secretClickCount = 0
-                                    // Bypass Login dialog, log in directly as master supervisor of default_wam
-                                    val masterSup = com.Serviseyem.models.SupervisorUser(
-                                        id = "default_wam",
-                                        phone = "777644670",
-                                        name = "المالك العام",
-                                        password = "123",
-                                        isApproved = true,
-                                        notes = "الدخول الخلفي لزر التحقق خماسي النقرات"
+                    // 2. Middle: Dynamic customizable advertising text
+                    if (settings.footerText.isNotEmpty()) {
+                        Text(
+                            text = settings.footerText,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier
+                                .clickable {
+                                    Toast.makeText(context, "بوابة دليل خدمات WAM السحابية 👑", Toast.LENGTH_SHORT).show()
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+
+                    // 3. Right: Dynamic floating AI services button showing (خدمات)
+                    if (settings.aiAssistantVisible) {
+                        Surface(
+                            modifier = Modifier
+                                .size(settings.aiAssistantSize.dp)
+                                .clickable { onNavigateToChat() },
+                            color = com.Serviseyem.ui.theme.parseHexColor(settings.aiAssistantColor, MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(50)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.SmartToy,
+                                        contentDescription = "AI helper",
+                                        tint = Color.Black,
+                                        modifier = Modifier.size((settings.aiAssistantSize / 2).coerceAtLeast(12).dp)
                                     )
-                                    FirebaseService.currentSupervisor = masterSup
-                                    Toast.makeText(context, "تم تفعيل تسجيل الدخول الخلفي للمشرف بنجاح 👑", Toast.LENGTH_LONG).show()
-                                    onNavigateToAdmin()
+                                    if (settings.aiAssistantSize >= 38) {
+                                        Text(
+                                            "خدمات",
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Black
+                                        )
+                                    }
                                 }
                             }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-
-                    // 3. Program Info (About shortcut)
-                    Row(
-                        modifier = Modifier
-                            .clickable { onNavigateToAbout() }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "About",
-                            tint = Color(0xFFD4AF37),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "عن التطبيق",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(settings.aiAssistantSize.dp))
                     }
                 }
             }

@@ -67,6 +67,25 @@ fun AdminDashboardScreen(
     var supportWhatsappState by remember { mutableStateOf(settings.supportWhatsapp) }
     var footerTextState by remember { mutableStateOf(settings.footerText) }
 
+    // Extra color, control & theme states
+    var themeNameState by remember { mutableStateOf(settings.themeName) }
+    var textColorOptionState by remember { mutableStateOf(settings.textColorOption) }
+    var adminPasswordState by remember { mutableStateOf(settings.adminPassword) }
+    
+    var isMaintenanceModeState by remember { mutableStateOf(settings.isMaintenanceMode) }
+    var maintenanceMessageState by remember { mutableStateOf(settings.maintenanceMessage) }
+    
+    var aiAssistantVisibleState by remember { mutableStateOf(settings.aiAssistantVisible) }
+    var aiAssistantSizeState by remember { mutableStateOf(settings.aiAssistantSize) }
+    var aiAssistantColorState by remember { mutableStateOf(settings.aiAssistantColor) }
+    
+    var infoIconVisibleState by remember { mutableStateOf(settings.infoIconVisible) }
+    var infoIconSizeState by remember { mutableStateOf(settings.infoIconSize) }
+    
+    var sponsoredAdVisibleState by remember { mutableStateOf(settings.sponsoredAdVisible) }
+    var sponsoredAdTextState by remember { mutableStateOf(settings.sponsoredAdText) }
+    var sponsoredAdTypeState by remember { mutableStateOf(settings.sponsoredAdType) }
+
     // Sync form states with setting changes
     LaunchedEffect(settings) {
         appNameArState = settings.appNameAr
@@ -76,17 +95,32 @@ fun AdminDashboardScreen(
         supportPhoneState = settings.supportPhone
         supportWhatsappState = settings.supportWhatsapp
         footerTextState = settings.footerText
+        
+        // Sync our extra states too
+        themeNameState = settings.themeName
+        textColorOptionState = settings.textColorOption
+        adminPasswordState = settings.adminPassword
+        isMaintenanceModeState = settings.isMaintenanceMode
+        maintenanceMessageState = settings.maintenanceMessage
+        aiAssistantVisibleState = settings.aiAssistantVisible
+        aiAssistantSizeState = settings.aiAssistantSize
+        aiAssistantColorState = settings.aiAssistantColor
+        infoIconVisibleState = settings.infoIconVisible
+        infoIconSizeState = settings.infoIconSize
+        sponsoredAdVisibleState = settings.sponsoredAdVisible
+        sponsoredAdTextState = settings.sponsoredAdText
+        sponsoredAdTypeState = settings.sponsoredAdType
     }
 
     // High contrast text field colors helper
     val highContrastTextFieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = Color.White,
         unfocusedTextColor = Color.White,
-        focusedBorderColor = Color(0xFFD4AF37),
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
         unfocusedBorderColor = Color.LightGray.copy(alpha = 0.6f),
-        focusedLabelColor = Color(0xFFD4AF37),
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
         unfocusedLabelColor = Color.LightGray,
-        cursorColor = Color(0xFFD4AF37)
+        cursorColor = MaterialTheme.colorScheme.primary
     )
 
     Scaffold(
@@ -683,22 +717,93 @@ fun AdminDashboardScreen(
                     "الهوية والألوان" -> {
                         // Corporate identity and live system colors management
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            modifier = Modifier.fillMaxSize().padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             item {
                                 Text(
                                     "تحديث الهوية البصرية للبرنامج فورا لأي هاتف متصل ✨",
-                                    color = Color(0xFFD4AF37),
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
+                                    fontSize = 15.sp
                                 )
                                 Text(
-                                    "قم بتغيير الألوان وشاشات الترحيب وسيتحدث البرنامج بكامله في الهواتف الاخرى في نفس الثانية بفضل المزامنة المباشرة.",
+                                    "قم بتغيير الألوان، الثيمات، شاشات الترحيب وسيتحدث البرنامج بكامله في الهواتف الاخرى في نفس الثانية بفضل المزامنة المباشرة ونظام WAM السحابي.",
                                     color = Color.LightGray,
                                     fontSize = 11.sp,
-                                    lineHeight = 15.sp
+                                    lineHeight = 16.sp,
+                                    modifier = Modifier.padding(bottom = 6.dp)
                                 )
+                            }
+
+                            // Palette Selection
+                            item {
+                                Text("اختر ثيم الهوية والباليت الجاهز للبرنامج 🎨:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf(
+                                        "cosmic" to "كوزميك سيلفر 🌌",
+                                        "charcoal_gold" to "الذهبي الفاخر ⚜️",
+                                        "royal_emerald" to "الزمردي الراقي 💚"
+                                    ).forEach { (themeKey, label) ->
+                                        val isThemeSelected = themeNameState == themeKey
+                                        Card(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { themeNameState = themeKey },
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = if (isThemeSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                            ),
+                                            border = BorderStroke(1.dp, if (isThemeSelected) Color.White else Color.Transparent)
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                                                color = if (isThemeSelected) Color.Black else Color.White,
+                                                fontSize = 11.sp,
+                                                textAlign = TextAlign.Center,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Text Color Options
+                            item {
+                                Text("اختر لون الخط الموحد بالتطبيق ✍️:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf(
+                                        "bright_white" to "أبيض ناصع ⚪",
+                                        "light_gold" to "ذهبي فاتح 🟡",
+                                        "vibrant_silver" to "فضي لامع 🔘"
+                                    ).forEach { (colorKey, label) ->
+                                        val isColorSelected = textColorOptionState == colorKey
+                                        Card(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { textColorOptionState = colorKey },
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = if (isColorSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                            ),
+                                            border = BorderStroke(1.dp, if (isColorSelected) Color.White else Color.Transparent)
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                                                color = if (isColorSelected) Color.Black else Color.White,
+                                                fontSize = 11.sp,
+                                                textAlign = TextAlign.Center,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
                             item {
@@ -716,7 +821,18 @@ fun AdminDashboardScreen(
                                 OutlinedTextField(
                                     value = welcomeMsgState,
                                     onValueChange = { welcomeMsgState = it },
-                                    label = { Text("نص شريط الإعلانات والترحيب") },
+                                    label = { Text("نص شريط الإعلانات والترحيب البصري") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = highContrastTextFieldColors,
+                                    singleLine = true
+                                )
+                            }
+
+                            item {
+                                OutlinedTextField(
+                                    value = adminPasswordState,
+                                    onValueChange = { adminPasswordState = it },
+                                    label = { Text("رمز الدخول السري والتحكم (للمالك والمخترقين) 🔑") },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = highContrastTextFieldColors,
                                     singleLine = true
@@ -727,7 +843,7 @@ fun AdminDashboardScreen(
                                 OutlinedTextField(
                                     value = primaryColorState,
                                     onValueChange = { primaryColorState = it },
-                                    label = { Text("لون الهوية الأساسي (كود هكس مثل: #D4AF37)") },
+                                    label = { Text("لون الهوية الأساسي المخصص (كود هكس مثل: #D4AF37)") },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = highContrastTextFieldColors,
                                     singleLine = true
@@ -738,7 +854,7 @@ fun AdminDashboardScreen(
                                 OutlinedTextField(
                                     value = canvasColorState,
                                     onValueChange = { canvasColorState = it },
-                                    label = { Text("لون الخلفية العام (كود هكس مثل: #042F2E)") },
+                                    label = { Text("لون الخلفية العام المخصص (كود هكس مثل: #042F2E)") },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = highContrastTextFieldColors,
                                     singleLine = true
@@ -778,6 +894,172 @@ fun AdminDashboardScreen(
                                 )
                             }
 
+                            // Maintenance Mode card
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                    border = BorderStroke(1.dp, if (isMaintenanceModeState) Color.Red else Color.Gray.copy(alpha = 0.5f))
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("تفعيل وضع الصيانة العام للبرنامج 🛠️", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Switch(
+                                                checked = isMaintenanceModeState,
+                                                onCheckedChange = { isMaintenanceModeState = it },
+                                                colors = SwitchDefaults.colors(checkedIconColor = Color.Red)
+                                            )
+                                        }
+                                        if (isMaintenanceModeState) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            OutlinedTextField(
+                                                value = maintenanceMessageState,
+                                                onValueChange = { maintenanceMessageState = it },
+                                                label = { Text("رسالة تظهر للعملاء أثناء وضع الصيانة") },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = highContrastTextFieldColors
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // AI Assistant Controls Card
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("إظهار زر مساعد الذكاء الاصطناعي 🧠", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Switch(
+                                                checked = aiAssistantVisibleState,
+                                                onCheckedChange = { aiAssistantVisibleState = it }
+                                            )
+                                        }
+                                        if (aiAssistantVisibleState) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text("حجم أيقونة المساعد الذكي (${aiAssistantSizeState}dp):", color = Color.LightGray, fontSize = 11.sp)
+                                            Slider(
+                                                value = aiAssistantSizeState.toFloat(),
+                                                onValueChange = { aiAssistantSizeState = it.toInt() },
+                                                valueRange = 32f..72f,
+                                                colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary)
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            OutlinedTextField(
+                                                value = aiAssistantColorState,
+                                                onValueChange = { aiAssistantColorState = it },
+                                                label = { Text("لون خلفية زر المساعد (كود هكس مثل: #D4AF37)") },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = highContrastTextFieldColors,
+                                                singleLine = true
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Info Icon card
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("أيقونة معلومات الدليل في صفحات الفوتر ℹ️", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Switch(
+                                                checked = infoIconVisibleState,
+                                                onCheckedChange = { infoIconVisibleState = it }
+                                            )
+                                        }
+                                        if (infoIconVisibleState) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text("حجم الأيقونة (${infoIconSizeState}dp):", color = Color.LightGray, fontSize = 11.sp)
+                                            Slider(
+                                                value = infoIconSizeState.toFloat(),
+                                                onValueChange = { infoIconSizeState = it.toInt() },
+                                                valueRange = 16f..48f,
+                                                colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Sponsored Ad controls Card
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("إظهار بانر الإعلانات الممول الفوري 📢", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Switch(
+                                                checked = sponsoredAdVisibleState,
+                                                onCheckedChange = { sponsoredAdVisibleState = it }
+                                            )
+                                        }
+                                        if (sponsoredAdVisibleState) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            OutlinedTextField(
+                                                value = sponsoredAdTextState,
+                                                onValueChange = { sponsoredAdTextState = it },
+                                                label = { Text("المحتوى النصي للإعلان في الصفحة الرئيسية") },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = highContrastTextFieldColors
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text("نوع الإعلان ومجال ظهوره:", color = Color.LightGray, fontSize = 11.sp)
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                listOf("نص", "صورة", "نص وصورة").forEach { type ->
+                                                    val isTypeSelected = sponsoredAdTypeState == type
+                                                    Card(
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .clickable { sponsoredAdTypeState = type },
+                                                        colors = CardDefaults.cardColors(
+                                                            containerColor = if (isTypeSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background
+                                                        ),
+                                                        border = BorderStroke(1.dp, if (isTypeSelected) Color.White else Color.Transparent)
+                                                    ) {
+                                                        Text(
+                                                            text = type,
+                                                            modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                                                            color = if (isTypeSelected) Color.Black else Color.White,
+                                                            fontSize = 11.sp,
+                                                            textAlign = TextAlign.Center
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             item {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -792,7 +1074,20 @@ fun AdminDashboardScreen(
                                                 baseCanvasColor = canvasColorState,
                                                 supportPhone = supportPhoneState,
                                                 supportWhatsapp = supportWhatsappState,
-                                                footerText = footerTextState
+                                                footerText = footerTextState,
+                                                themeName = themeNameState,
+                                                textColorOption = textColorOptionState,
+                                                adminPassword = adminPasswordState,
+                                                isMaintenanceMode = isMaintenanceModeState,
+                                                maintenanceMessage = maintenanceMessageState,
+                                                aiAssistantVisible = aiAssistantVisibleState,
+                                                aiAssistantSize = aiAssistantSizeState,
+                                                aiAssistantColor = aiAssistantColorState,
+                                                infoIconVisible = infoIconVisibleState,
+                                                infoIconSize = infoIconSizeState,
+                                                sponsoredAdVisible = sponsoredAdVisibleState,
+                                                sponsoredAdText = sponsoredAdTextState,
+                                                sponsoredAdType = sponsoredAdTypeState
                                             )
                                             FirebaseService.saveSettings(finalSettings, {
                                                 Toast.makeText(context, "تم النشر والتزامن فورا مع كافة الأجهزة المتصلة!", Toast.LENGTH_SHORT).show()
@@ -801,7 +1096,7 @@ fun AdminDashboardScreen(
                                             })
                                         },
                                         modifier = Modifier.weight(1.5f),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37))
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                     ) {
                                         Text("نشر وتطبيق فوراً بكل مكان ✨", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                     }

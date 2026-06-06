@@ -35,28 +35,58 @@ fun RegisterProviderScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
+    val categoriesFromDb by FirebaseService.categoriesList.collectAsState()
+    val citiesFromDb by FirebaseService.citiesList.collectAsState()
+
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var specialty by remember { mutableStateOf("") }
+    
+    // Dynamic Selectors with Fallback
+    val mainCategories = categoriesFromDb.filter { it.parentId.isEmpty() }.map { it.nameAr }
+    val categoriesList = if (mainCategories.isNotEmpty()) mainCategories else listOf("كهربائي", "صيانة سباكة", "خدمات إلكترونية", "دعم فني", "عقارية وتجارية")
+    
+    val fallbackSubServices = mapOf(
+        "كهربائي" to listOf("توصيل وتمديد شبكات", "صيانة الأجهزة المنزلية", "تركيب مصابيح وثريات", "أخرى"),
+        "صيانة سباكة" to listOf("تأسيس سباكة متكاملة", "صيانة تسريبات المياه", "تركيب مضخات مياه", "أخرى"),
+        "خدمات إلكترونية" to listOf("معاملات حكومية سريعة", "تصوير وتصميم إعلانات", "برمجة تطبيقات ومواقع", "أخرى"),
+        "دعم فني" to listOf("صيانة كمبيوتر وهواتف", "تركيب شبكات وكاميرات", "دعم تقني فوري", "أخرى"),
+        "عقارية وتجارية" to listOf("تسويق عقاري فاخر", "إدارة وتأجير المحلات", "إدارة وتطوير المشاريع", "أخرى")
+    )
+
+    var selectedCategory by remember { mutableStateOf(categoriesList.first()) }
+    
+    val currentSubServices = fallbackSubServices[selectedCategory] ?: listOf("أعمال عامة ومتنوعة", "خدمات VIP سريعة", "أخرى")
+    var selectedServiceAr by remember { mutableStateOf(currentSubServices.first()) }
+
+    val citiesNamesList = citiesFromDb.map { it.nameAr }
+    val citiesList = if (citiesNamesList.isNotEmpty()) citiesNamesList else listOf("صنعاء", "عدن", "تعز", "حضرموت", "الحديدة")
+    var selectedCity by remember { mutableStateOf(citiesList.first()) }
+    var neighborhood by remember { mutableStateOf("") }
+
     var password by remember { mutableStateOf("") }
     var identityNumber by remember { mutableStateOf("") }
     var agreed by remember { mutableStateOf(false) }
+
+    // Dialog Expand controllers
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    var showServiceDialog by remember { mutableStateOf(false) }
+    var showCityDialog by remember { mutableStateOf(false) }
 
     // High Contrast color values for OutlinedTextField to solve invisible input text completely
     val highContrastTextFieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = Color.White,
         unfocusedTextColor = Color.White,
-        focusedBorderColor = Color(0xFFD4AF37),
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
         unfocusedBorderColor = Color.LightGray.copy(alpha = 0.6f),
-        focusedLabelColor = Color(0xFFD4AF37),
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
         unfocusedLabelColor = Color.LightGray,
-        cursorColor = Color(0xFFD4AF37)
+        cursorColor = MaterialTheme.colorScheme.primary
     )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("طلب انضمام مقدم خدمة 🛠️", color = Color(0xFFD4AF37), fontWeight = FontWeight.Bold) },
+                title = { Text("طلب انضمام مقدم خدمة 🛠️", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -83,11 +113,11 @@ fun RegisterProviderScreen(
                     .padding(bottom = 16.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                border = BorderStroke(1.dp, Color(0xFFD4AF37).copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Info, contentDescription = "Info", tint = Color(0xFFD4AF37))
+                        Icon(Icons.Default.Info, contentDescription = "Info", tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "انضم لصفحتنا المباشرة في دليل اليمن الفاخر ✨",
@@ -98,7 +128,7 @@ fun RegisterProviderScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "يرجى تسجيل بياناتك بشكل دقيق. سيراجع المشرفون طلبك ويقومون بوضعه في الدليل بشكل مباشر وفوري فور الاعتماد.",
+                        "يرجى تسجيل بياناتك بشكل دقيق وحرية اختيار القسم والخدمة. سيراجع المشرفون طلبك ويقومون بوضعه في الدليل بشكل مباشر وفوري فور الاعتماد.",
                         color = Color.LightGray,
                         fontSize = 11.sp,
                         lineHeight = 16.sp,
@@ -118,7 +148,7 @@ fun RegisterProviderScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(4.dp)
-                        .background(Color(0xFFD4AF37))
+                        .background(MaterialTheme.colorScheme.primary)
                 )
 
                 Column(
@@ -143,11 +173,69 @@ fun RegisterProviderScreen(
                         singleLine = true
                     )
 
+                    // 1. Dynamic Category Selector
+                    Text("القسم المهني الرئيسي للعمل:", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showCategoryDialog = true }
+                            .border(1.dp, Color.LightGray.copy(alpha = 0.6f), RoundedCornerShape(8.dp)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(selectedCategory, color = Color.White, fontSize = 13.sp)
+                            Text("تغيير ⚡", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // 2. Specialty/Service Selection Dropdown
+                    Text("المهنة أو الخدمة الفرعية المحددة:", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showServiceDialog = true }
+                            .border(1.dp, Color.LightGray.copy(alpha = 0.6f), RoundedCornerShape(8.dp)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(selectedServiceAr, color = Color.White, fontSize = 13.sp)
+                            Text("تغيير ⚡", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // 3. City Selection Dropdown
+                    Text("المدينة الرئيسية للخدمات:", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showCityDialog = true }
+                            .border(1.dp, Color.LightGray.copy(alpha = 0.6f), RoundedCornerShape(8.dp)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(selectedCity, color = Color.White, fontSize = 13.sp)
+                            Text("تغيير ⚡", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // 4. Neighborhood input
                     OutlinedTextField(
-                        value = specialty,
-                        onValueChange = { specialty = it },
-                        label = { Text("ما هي طبيعة تخصصك أو الخدمة التي تقدمها") },
-                        modifier = Modifier.fillMaxWidth().testTag("provider_specialty_input"),
+                        value = neighborhood,
+                        onValueChange = { neighborhood = it },
+                        label = { Text("اسم الحي أو الشارع بالتفصيل (مثال: حي حدة / تقاطع الرقاص)") },
+                        modifier = Modifier.fillMaxWidth().testTag("provider_neighborhood_input"),
                         colors = highContrastTextFieldColors,
                         singleLine = true
                     )
@@ -170,7 +258,7 @@ fun RegisterProviderScreen(
                         singleLine = true
                     )
 
-                    // Fake Document Upload UI for Premium Visual appeal (doesn't require heavy dependencies)
+                    // Fake Document Upload UI for Premium Visual appeal
                     Text("المستندات والصور الشخصية المعتمدة:", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                     
                     Row(
@@ -188,7 +276,7 @@ fun RegisterProviderScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("صورة شخصية 🧔", color = Color(0xFFD4AF37), fontSize = 11.sp, textAlign = TextAlign.Center)
+                                Text("صورة شخصية 🧔", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, textAlign = TextAlign.Center)
                             }
                         }
 
@@ -203,7 +291,7 @@ fun RegisterProviderScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("صورة الهوية 🪪", color = Color(0xFFD4AF37), fontSize = 11.sp, textAlign = TextAlign.Center)
+                                Text("صورة الهوية 🪪", color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, textAlign = TextAlign.Center)
                             }
                         }
                     }
@@ -215,7 +303,7 @@ fun RegisterProviderScreen(
                         Checkbox(
                             checked = agreed,
                             onCheckedChange = { agreed = it },
-                            colors = CheckboxDefaults.colors(checkedColor = Color(0xFFD4AF37))
+                            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                         )
                         Text(
                             "أقر بكل دقة بصحة هذه البيانات وموافق على سياسة WAM 🛡️",
@@ -227,7 +315,7 @@ fun RegisterProviderScreen(
 
                     Button(
                         onClick = {
-                            if (name.isEmpty() || phone.isEmpty() || specialty.isEmpty() || password.isEmpty() || identityNumber.isEmpty()) {
+                            if (name.isEmpty() || phone.isEmpty() || identityNumber.isEmpty() || password.isEmpty()) {
                                 Toast.makeText(context, "عذراً الرجاء إدخال كافة الحقول وتصوير المستندات", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
@@ -235,12 +323,15 @@ fun RegisterProviderScreen(
                                 Toast.makeText(context, "الرجاء الموافقة على صحة البيانات المكتوبة", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
+                            
                             val provider = ServiceProvider(
+                                id = phone,
                                 name = name,
                                 phone = phone,
-                                specialty = specialty,
+                                specialty = "$selectedCategory - $selectedServiceAr ($selectedCity - $neighborhood)",
                                 password = password,
-                                identityNumber = identityNumber
+                                identityNumber = identityNumber,
+                                status = "أنتظر الموافقة"
                             )
                             FirebaseService.registerProvider(provider, {
                                 Toast.makeText(context, "🎉 تم تسجيل طلبك بنجاح ونشره للمراجعة الفورية لدى المشرفين!", Toast.LENGTH_LONG).show()
@@ -249,7 +340,7 @@ fun RegisterProviderScreen(
                                 Toast.makeText(context, "عذراً فشل الاتصال بالإنترنت للتسجيل", Toast.LENGTH_SHORT).show()
                             })
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -261,5 +352,116 @@ fun RegisterProviderScreen(
                 }
             }
         }
+    }
+
+    // Modal List Dialog for Main Categories
+    if (showCategoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showCategoryDialog = false },
+            title = { Text("اختر القسم الرئيسي 🏷️", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    categoriesList.forEach { cat ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedCategory = cat
+                                    // Reset service selection matching category
+                                    val matchedSubs = fallbackSubServices[cat] ?: listOf("أعمال عامة ومتنوعة", "خدمات VIP سريعة")
+                                    selectedServiceAr = matchedSubs.first()
+                                    showCategoryDialog = false
+                                },
+                            colors = CardDefaults.cardColors(containerColor = if (selectedCategory == cat) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Text(cat, modifier = Modifier.padding(14.dp), color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showCategoryDialog = false }) {
+                    Text("إلغاء", color = Color.LightGray)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Modal List Dialog for Sub Services
+    if (showServiceDialog) {
+        AlertDialog(
+            onDismissRequest = { showServiceDialog = false },
+            title = { Text("اختر نوع التخصص الفرعي 🛠️", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    currentSubServices.forEach { sub ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedServiceAr = sub
+                                    showServiceDialog = false
+                                },
+                            colors = CardDefaults.cardColors(containerColor = if (selectedServiceAr == sub) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Text(sub, modifier = Modifier.padding(14.dp), color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showServiceDialog = false }) {
+                    Text("إلغاء", color = Color.LightGray)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Modal List Dialog for Cities
+    if (showCityDialog) {
+        AlertDialog(
+            onDismissRequest = { showCityDialog = false },
+            title = { Text("اختر المدينة يمنياً 📍", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    citiesList.forEach { city ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedCity = city
+                                    showCityDialog = false
+                                },
+                            colors = CardDefaults.cardColors(containerColor = if (selectedCity == city) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Text(city, modifier = Modifier.padding(14.dp), color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showCityDialog = false }) {
+                    Text("إلغاء", color = Color.LightGray)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
