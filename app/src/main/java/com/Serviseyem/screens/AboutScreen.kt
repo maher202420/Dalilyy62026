@@ -28,7 +28,7 @@ import com.Serviseyem.services.FirebaseService
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun AboutScreen() {
+fun AboutScreen(onNavigateBack: () -> Unit = {}) {
     val context = LocalContext.current
     val settingsState by FirebaseService.settings.collectAsState()
     val scrollState = rememberScrollState()
@@ -41,7 +41,27 @@ fun AboutScreen() {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "عودة",
+                    tint = Color.White
+                )
+            }
+            Text(
+                text = "عن الدليل",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Large Logo Header
         Box(

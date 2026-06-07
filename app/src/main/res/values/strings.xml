@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">دليل خدمات يمن WAM</string>
+    
+    <!-- Fallback Firebase configuration strings so we don't rely on the early-resolving google-services plugin -->
+    <string name="google_app_id" translatable="false">1:100020003000:android:3ba85ea6efefca72</string>
+    <string name="google_api_key" translatable="false">AIzaSyFakeKeyForCompilingAndroidServiseyemApp</string>
+    <string name="firebase_database_url" translatable="false">https://serviseyem.firebaseio.com</string>
+    <string name="google_storage_bucket" translatable="false">serviseyem.appspot.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">100020003000</string>
+    <string name="project_id" translatable="false">serviseyem</string>
 </resources>

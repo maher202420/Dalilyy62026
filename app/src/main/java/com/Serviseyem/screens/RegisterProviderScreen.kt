@@ -239,7 +239,7 @@ fun RegisterProviderScreen(
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 4.dp)) {
                         Text("خط العرض (Lat):", color = Color.White, fontSize = 10.sp)

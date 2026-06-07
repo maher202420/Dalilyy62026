@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.google.gms.google-services")
 }
 
 android {
@@ -73,7 +72,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     // Map Integrations
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    // implementation("com.google.android.gms:play-services-maps:18.2.0")
 
     // Gson (Manual serialization for backup & custom settings)
     implementation("com.google.code.gson:gson:2.10.1")

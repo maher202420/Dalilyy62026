@@ -32,6 +32,7 @@ import java.util.*
 
 @Composable
 fun ChatScreen(
+    initialChatSessionId: String? = null,
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -70,7 +71,7 @@ fun ChatScreen(
     }
 
     // UI state: selected active channel or lobby listing
-    var selectedChannelId by remember { mutableStateOf<String?>(null) }
+    var selectedChannelId by remember { mutableStateOf<String?>(initialChatSessionId) }
     var selectedChannelSession by remember { mutableStateOf<ChatSession?>(null) }
 
     val chatSessions by FirebaseService.chatSessionsList.collectAsState()
@@ -80,6 +81,16 @@ fun ChatScreen(
     LaunchedEffect(Unit) {
         FirebaseService.loadInitialCachedData()
         FirebaseService.initListeners()
+    }
+
+    // Dynamic resolution of the active session
+    LaunchedEffect(chatSessions, selectedChannelId) {
+        if (selectedChannelId != null) {
+            val found = chatSessions.find { it.id == selectedChannelId }
+            if (found != null) {
+                selectedChannelSession = found
+            }
+        }
     }
 
     // Listen to changing message logs when channel selection modifies
