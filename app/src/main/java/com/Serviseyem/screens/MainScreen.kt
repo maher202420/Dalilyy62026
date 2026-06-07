@@ -2,20 +2,17 @@ package com.Serviseyem.screens
 
 import android.content.Intent
 import android.net.Uri
-import android.speech.RecognizerIntent
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,765 +21,1267 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.Serviseyem.models.CategoryItem
-import com.Serviseyem.models.DatabaseCity
-import com.Serviseyem.models.ServiceProvider
-import com.Serviseyem.models.ChatSession
-import com.Serviseyem.services.FirebaseService
-import java.util.*
-import kotlin.math.*
+import com.Serviseyem.models.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    onNavigateToChat: () -> Unit = {},
-    onNavigateToRegister: () -> Unit = {},
-    onNavigateToAbout: () -> Unit = {},
-    onNavigateToChatWithSession: (String) -> Unit = {}
+    viewModel: AppViewModel,
+    onNavigateToAdmin: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val settings by FirebaseService.settings.collectAsState()
-    val providers by FirebaseService.providersList.collectAsState()
-    val categories by FirebaseService.categoriesList.collectAsState()
-    val cities by FirebaseService.citiesList.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
-    // Query states
+    // Filter and search elements
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf<String?>(null) }
     var selectedCityFilter by remember { mutableStateOf<String?>(null) }
-    var minimumRating by remember { mutableFloatStateOf(0f) }
-    
-    // Radius lookup states
-    var simulatedUserLat by remember { mutableDoubleStateOf(15.35) } // Sana'a coordinates
-    var simulatedUserLng by remember { mutableDoubleStateOf(44.20) }
-    var insideRadiusLimit by remember { mutableDoubleStateOf(0.0) } // 0.0 means disabled
-    var simulatedAddressText by remember { mutableStateOf("صنعاء، التحرير") }
-    var showAddressAutoComplete by remember { mutableStateOf(false) }
+    var userSearchRadiusLimit by remember { mutableDoubleStateOf(viewModel.mapRadiusKm) }
 
-    // Autocomplete predictions for addresses
-    val autocompleteSuggestions = listOf(
-        "صنعاء، حدة" to (15.3129 to 44.1866),
-        "صنعاء، الأصبحي" to (15.2891 to 44.2185),
-        "صنعاء، التحرير" to (15.3526 to 44.2058),
-        "صنعاء، شارع الستين" to (15.3644 to 44.1678),
-        "عدن، كريتر" to (12.7844 to 45.0345),
-        "عدن، المنصورة" to (12.8466 to 44.9811),
-        "تعز، شارع جمال" to (13.5786 to 44.0134),
-        "إب، يريم" to (14.2882 to 44.3789),
-        "الحديدة، الحوك" to (14.7925 to 42.9555)
-    )
+    // Dialogue triggers
+    var showRatingDialog by remember { mutableStateOf(false) }
+    var selectedProviderForRating by remember { mutableStateOf<ServiceProvider?>(null) }
+    var ratingStarsSelected by remember { mutableIntStateOf(5) }
+    var ratingCommentText by remember { mutableStateOf("") }
 
-    // Voice search results launcher
-    val voiceLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            if (!spoken.isNullOrEmpty()) {
-                searchQuery = spoken[0]
-                Toast.makeText(context, "البحث الصوتي: $searchQuery", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
+    // Voice search triggers
+    var isVoiceSpeakingSimulated by remember { mutableStateOf(false) }
+    var voiceTimerJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
-    // Selected provider details Modal State
-    var selectedProviderForDetail by remember { mutableStateOf<ServiceProvider?>(null) }
+    // Booking appointment triggers
+    var showNewBookingCreator by remember { mutableStateOf(false) }
+    var bookingCustomerName by remember { mutableStateOf("") }
+    var bookingCustomerPhone by remember { mutableStateOf("") }
+    var selectedTechForBooking by remember { mutableStateOf<ServiceProvider?>(null) }
+    var bookingDateStr by remember { mutableStateOf("2026-06-12") }
+    var bookingTimeStr by remember { mutableStateOf("04:30 م") }
 
-    // Real-time filtering function
-    val filteredProviders = remember(providers, searchQuery, selectedCategoryFilter, selectedCityFilter, minimumRating, insideRadiusLimit, simulatedUserLat, simulatedUserLng) {
-        providers.filter { p ->
-            // Only verified status
-            if (p.status != "مقبول") return@filter false
+    // Chat bubble triggers
+    var showChatConversationPanel by remember { mutableStateOf(false) }
+    var selectSessionForChat by remember { mutableStateOf<ChatSession?>(null) }
+    var newChatMessageInput by remember { mutableStateOf("") }
 
-            // Text search (Name, Specialty, addresses)
-            val matchesQuery = searchQuery.isEmpty() ||
-                    p.name.contains(searchQuery, ignoreCase = true) ||
-                    p.specialty.contains(searchQuery, ignoreCase = true) ||
-                    p.businessAddress.contains(searchQuery, ignoreCase = true) ||
-                    p.phone.contains(searchQuery)
+    // Backdoor secret tapping indicator
+    var secretHeaderFlagTapCount by remember { mutableIntStateOf(0) }
+    var secretFooterVersionTapCount by remember { mutableIntStateOf(0) }
 
-            // Category filter
-            val matchesCategory = selectedCategoryFilter == null || p.specialty.contains(selectedCategoryFilter!!)
-
-            // City filter
-            val matchesCity = selectedCityFilter == null || p.residenceAddress.contains(selectedCityFilter!!)
-
-            // Rating filter
-            val matchesRating = p.rating >= minimumRating
-
-            // Distance search (Radius)
-            val matchesDistance = if (insideRadiusLimit > 0.0 && p.latitude != null && p.longitude != null) {
-                // Haversine formula
-                val earthRadius = 6371.0 // kilometers
-                val dLat = Math.toRadians(p.latitude - simulatedUserLat)
-                val dLng = Math.toRadians(p.longitude - simulatedUserLng)
-                val a = sin(dLat / 2).pow(2.0) + cos(Math.toRadians(simulatedUserLat)) * cos(Math.toRadians(p.latitude)) * sin(dLng / 2).pow(2.0)
-                val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-                val distance = earthRadius * c
-                distance <= insideRadiusLimit
-            } else {
-                true
-            }
-
-            matchesQuery && matchesCategory && matchesCity && matchesRating && matchesDistance
+    // Match filtering on active providers
+    val activeAndApprovedProviders = remember(viewModel.providers, searchQuery, selectedCategoryFilter, selectedCityFilter, userSearchRadiusLimit) {
+        viewModel.providers.filter { p ->
+            p.status == "مقبول" &&
+            (selectedCategoryFilter == null || p.specialty == selectedCategoryFilter) &&
+            (selectedCityFilter == null || p.city == selectedCityFilter) &&
+            (searchQuery.isEmpty() || p.name.contains(searchQuery, ignoreCase = true) || p.biography.contains(searchQuery, ignoreCase = true) || p.specialty.contains(searchQuery, ignoreCase = true))
         }
     }
 
     Scaffold(
-        bottomBar = {
-            // Keep AI assistant 🤖 and true Chat System without unwanted additions
-            NavigationBar(
-                containerColor = Color(0xFF1E293B),
-                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
-            ) {
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { /* Stay on Main */ },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home", tint = Color(0xFFD4AF37)) },
-                    label = { Text("الرئيسية", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                    colors = NavigationBarItemDefaults.colors(indicatorColor = Color(0xFF334155))
-                )
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToChat,
-                    icon = { Icon(Icons.Default.Chat, contentDescription = "Chat", tint = Color.LightGray) },
-                    label = { Text("دردشة WAM", color = Color.LightGray, fontSize = 11.sp) },
-                    colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
-                )
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToAbout,
-                    icon = { Icon(Icons.Default.Info, contentDescription = "About", tint = Color.LightGray) },
-                    label = { Text("عن الدليل", color = Color.LightGray, fontSize = 11.sp) },
-                    colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent)
-                )
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF0F172A))
-                .padding(innerPadding)
-        ) {
-            // Sponsored Ad Banner representation
-            if (settings.sponsoredAdVisible) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF1E3A8A))
-                        .padding(8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Campaign, contentDescription = null, tint = Color(0xFFD4AF37), modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = settings.sponsoredAdText,
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            }
-
-            WamTopBar(
-                onInfoClicked = onNavigateToAbout,
-                onSecretPortalOpened = {
-                    // Navigate to Secret Portal (Triggered automatically)
-                    onNavigateToRegister() // Reuse register path or navigation flow in MainActivity
-                }
-            )
-
-            // Search Triggers & Inputs
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-                border = BorderStroke(1.dp, Color(0xFF334155))
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    // Text search bar
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            placeholder = { Text("ابحث بالاسم، الرقم، التخصص...", color = Color.LightGray, fontSize = 12.sp) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(Icons.Default.Clear, contentDescription = null, tint = Color.Gray)
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(24.dp))
-                                .testTag("main_search_text"),
-                            colors = TextFieldDefaults.colors(
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedContainerColor = Color(0xFF0F172A),
-                                unfocusedContainerColor = Color(0xFF0F172A),
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            singleLine = true
-                        )
-
-                        // Voice Search Button (controlled from AppSettings)
-                        if (settings.voiceSearchEnabled) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            FilledIconButton(
-                                onClick = {
-                                    try {
-                                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
-                                            putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث للبحث الفوري عن مقدم الخدمة...")
-                                        }
-                                        voiceLauncher.launch(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "البحث الصوتي غير مدعوم على جهازك", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFF064E3B)),
-                                modifier = Modifier.size(44.dp).testTag("voice_search_mic_btn")
-                            ) {
-                                Icon(Icons.Default.Mic, contentDescription = "Voice Search", tint = Color(0xFFD4AF37))
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Simulated Location Autocomplete widget
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.MyLocation, contentDescription = null, tint = Color(0xFFD4AF37), modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "موقعك الحالي للاستعلام: $simulatedAddressText",
-                                color = Color.LightGray,
-                                fontSize = 11.sp,
-                                modifier = Modifier
-                                    .clickable { showAddressAutoComplete = !showAddressAutoComplete }
-                                    .padding(vertical = 4.dp)
-                            )
-
-                            DropdownMenu(
-                                expanded = showAddressAutoComplete,
-                                onDismissRequest = { showAddressAutoComplete = false },
-                                modifier = Modifier.background(Color(0xFF1E293B)),
-                            ) {
-                                autocompleteSuggestions.forEach { (name, coords) ->
-                                    DropdownMenuItem(
-                                        text = { Text(name, color = Color.White, fontSize = 12.sp) },
-                                        onClick = {
-                                            simulatedAddressText = name
-                                            simulatedUserLat = coords.first
-                                            simulatedUserLng = coords.second
-                                            showAddressAutoComplete = false
-                                            Toast.makeText(context, "تم تحديد موقع $name بنجاح!", Toast.LENGTH_SHORT).show()
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Radius filter selectors (Limit distance - controlled by secret Admin Settings distance limit)
+        topBar = {
+            TopAppBar(
+                title = {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("البحث بالمسأفة القريبة:", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "🇾🇪",
+                                fontSize = 26.sp,
+                                modifier = Modifier
+                                    .padding(end = 6.dp)
+                                    .clickable {
+                                        secretHeaderFlagTapCount++
+                                        if (secretHeaderFlagTapCount >= 5) {
+                                            secretHeaderFlagTapCount = 0
+                                            Toast.makeText(context, "🔓 تم كشف بوابة المالك السرية عبر الراية!", Toast.LENGTH_SHORT).show()
+                                            onNavigateToAdmin()
+                                        }
+                                    }
+                            )
+                            Text(
+                                text = "دليل خدمات اليمن",
+                                color = viewModel.appPrimaryColor,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                         
-                        Row {
-                            listOf(0.0 to "الكل", 5.0 to "5كم", 10.0 to "10كم", 20.0 to "20كم").forEach { (rad, label) ->
-                                val isSelected = insideRadiusLimit == rad
-                                Card(
-                                    modifier = Modifier
-                                        .padding(horizontal = 4.dp)
-                                        .clickable { insideRadiusLimit = rad },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) Color(0xFF064E3B) else Color(0xFF0F172A)
-                                    ),
-                                    border = BorderStroke(1.dp, if (isSelected) Color(0xFFD4AF37) else Color(0xFF334155))
-                                ) {
-                                    Text(
-                                        text = label,
-                                        color = if (isSelected) Color(0xFFD4AF37) else Color.White,
-                                        fontSize = 11.sp,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
+                        IconButton(onClick = { onNavigateToAdmin() }) {
+                            Icon(
+                                imageVector = Icons.Default.SettingsInputComposite,
+                                contentDescription = "بوابة المالك",
+                                tint = viewModel.appPrimaryColor
+                            )
                         }
                     }
-                }
-            }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0C0C0C))
+            )
+        },
+        containerColor = Color(0xFF0C0D0E)
+    ) { paddingVals ->
 
-            // Categories horizontal slider list
-            LazyRow(
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingVals)
+        ) {
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(bottom = 90.dp, top = 8.dp)
             ) {
+
+                // 1. Marquee Banner Yemen Welcome Flag
                 item {
-                    val isAllSelected = selectedCategoryFilter == null
                     Card(
-                        modifier = Modifier.clickable { selectedCategoryFilter = null },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isAllSelected) Color(0xFFD4AF37) else Color(0xFF1E293B)
-                        ),
-                        border = BorderStroke(1.dp, Color(0xFF334155))
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF151515)),
+                        border = BorderStroke(1.dp, Color(0xFF252525))
                     ) {
-                        Text(
-                            text = "الكل",
-                            color = if (isAllSelected) Color.Black else Color.White,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                items(categories) { cat ->
-                    val isSelected = selectedCategoryFilter == cat.nameAr
-                    Card(
-                        modifier = Modifier.clickable { selectedCategoryFilter = cat.nameAr },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) Color(0xFFD4AF37) else Color(0xFF1E293B)
-                        ),
-                        border = BorderStroke(1.dp, Color(0xFF334155))
-                    ) {
-                        Text(
-                            text = cat.nameAr,
-                            color = if (isSelected) Color.Black else Color.White,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Cities filters & matching providers title in Main UI
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Engineering, contentDescription = null, tint = Color(0xFFD4AF37), modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "مزودين الخدمة بـ WAM (${filteredProviders.size})",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // City filter selector dropdown trigger
-                var showCityMenu by remember { mutableStateOf(false) }
-                Button(
-                    onClick = { showCityMenu = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = if (selectedCityFilter == null) "كل المدن 🌍" else "المدينة: $selectedCityFilter",
-                        color = Color(0xFFD4AF37),
-                        fontSize = 11.sp
-                    )
-                    DropdownMenu(
-                        expanded = showCityMenu,
-                        onDismissRequest = { showCityMenu = false },
-                        modifier = Modifier.background(Color(0xFF1E293B))
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("كل المدن يمن", color = Color.White) },
-                            onClick = {
-                                selectedCityFilter = null
-                                showCityMenu = false
-                            }
-                        )
-                        cities.forEach { c ->
-                            DropdownMenuItem(
-                                text = { Text(c.nameAr, color = Color.White) },
-                                onClick = {
-                                    selectedCityFilter = c.nameAr
-                                    showCityMenu = false
-                                }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "🇾🇪", fontSize = 24.sp, modifier = Modifier.padding(end = 8.dp))
+                            AutoMarqueeText(
+                                text = "أهلاً ومرحباً بكم مع تطبيق دليل كل خدمات اليمن - الرفيق الموثوق للأعمال المهنية وصيانة المنازل بدقة معيارية لحظية متميزة",
+                                color = viewModel.appPrimaryColor,
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
                 }
-            }
 
-            // Providers List view
-            if (filteredProviders.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.SearchOff, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp))
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "عذراً! لم نجد مقدمين موافقين للمعاير المحددة.\nجرب كتابة عبارة بحث أخرى.",
-                            color = Color.LightGray,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                ) {
-                    items(filteredProviders) { provider ->
+                // 1.5 Admin Chat/Status Alert Announcement
+                if (!viewModel.isChatInstantEnabled) {
+                    item {
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 5.dp)
-                                .clickable { selectedProviderForDetail = provider },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-                            border = BorderStroke(1.dp, if (provider.isVip) Color(0xFFD4AF37) else Color(0xFF334155))
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF7F1D1D)),
+                            border = BorderStroke(1.dp, Color(0xFFEF4444))
                         ) {
                             Row(
                                 modifier = Modifier.padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Avatar circle or specialist tags
+                                Icon(Icons.Default.Warning, contentDescription = "تنبيه", tint = Color.White, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = viewModel.chatDisabledMessage,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 2. Active Sponsored Banner
+                if (viewModel.banners.any { it.isVisible }) {
+                    val currentAd = viewModel.banners.first { it.isVisible }
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2C)),
+                            border = BorderStroke(1.dp, viewModel.appPrimaryColor)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "🔥 إعلان ممول معتمد",
+                                        color = Color(0xFFEF4444),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E2E3E)),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "عرض رسمي",
+                                            color = Color.LightGray,
+                                            fontSize = 9.sp,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = currentAd.title,
+                                    color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "توجيه تلقائي إلى تخصص: ${currentAd.targetSectionId}",
+                                    color = Color.Gray,
+                                    fontSize = 11.sp
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        selectedCategoryFilter = currentAd.targetSectionId
+                                        Toast.makeText(context, "تم التوجيه وتصفية الدليل إلى: ${currentAd.targetSectionId}", Toast.LENGTH_SHORT).show()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor),
+                                    shape = RoundedCornerShape(6.dp),
+                                    modifier = Modifier.align(Alignment.End),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text("عرض الفنيين المشمولين", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Search and Radius Filters Panel
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF121212), RoundedCornerShape(12.dp))
+                            .border(1.dp, Color(0xFF222222), RoundedCornerShape(12.dp))
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextField(
+                                value = searchQuery,
+                                onValueChange = { 
+                                    searchQuery = it 
+                                    if (searchQuery == "/admin" || searchQuery == "7777") {
+                                        onNavigateToAdmin()
+                                    }
+                                },
+                                placeholder = { Text("بحث باسم الفني أو المهارة...", fontSize = 12.sp, color = Color.Gray) },
+                                modifier = Modifier.weight(1f),
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = viewModel.appPrimaryColor) },
+                                singleLine = true,
+                                colors = TextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color(0xFF0A0A0A),
+                                    unfocusedContainerColor = Color(0xFF0A0A0A)
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            
+                            // Mic Speech Recognition Button
+                            if (viewModel.voiceSearchEnabled) {
                                 Box(
                                     modifier = Modifier
-                                        .size(54.dp)
-                                        .background(Color(0xFF0F172A), CircleShape),
+                                        .size(48.dp)
+                                        .background(
+                                            if (isVoiceSpeakingSimulated) Color.Red else viewModel.appPrimaryColor,
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .clickable {
+                                            if (!isVoiceSpeakingSimulated) {
+                                                isVoiceSpeakingSimulated = true
+                                                Toast
+                                                    .makeText(
+                                                        context,
+                                                        "🎙️ جاري الاستماع الصوتي... تحدث الآن!",
+                                                        Toast.LENGTH_SHORT
+                                                    )
+                                                    .show()
+                                                voiceTimerJob = coroutineScope.launch {
+                                                    delay(3000)
+                                                    isVoiceSpeakingSimulated = false
+                                                    // Make a simulated search result
+                                                    val results = listOf("سباكة", "تبريد وتكييف", "كهرباء")
+                                                    val sp = results.random()
+                                                    selectedCategoryFilter = sp
+                                                    Toast
+                                                        .makeText(
+                                                            context,
+                                                            "🔊 تم تمييز الصوت بنجاح: '$sp'",
+                                                            Toast.LENGTH_LONG
+                                                        )
+                                                        .show()
+                                                }
+                                            } else {
+                                                isVoiceSpeakingSimulated = false
+                                                voiceTimerJob?.cancel()
+                                            }
+                                        },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = if (provider.gender == "أنثى") Icons.Default.Face else Icons.Default.Person,
-                                        contentDescription = null,
-                                        tint = if (provider.isVip) Color(0xFFD4AF37) else Color.White,
-                                        modifier = Modifier.size(28.dp)
+                                        imageVector = if (isVoiceSpeakingSimulated) Icons.Default.MicNone else Icons.Default.Mic,
+                                        contentDescription = "بحث صوتي",
+                                        tint = if (isVoiceSpeakingSimulated) Color.White else Color.Black,
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
+                            }
+                        }
 
-                                Spacer(modifier = Modifier.width(12.dp))
+                        // Search Radius limit selector
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "📍 نطاق الفرز الجغرافي: ${userSearchRadiusLimit.toInt()} كم",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Slider(
+                                value = userSearchRadiusLimit.toFloat(),
+                                onValueChange = { userSearchRadiusLimit = it.toDouble() },
+                                valueRange = 5f..50f,
+                                steps = 9,
+                                modifier = Modifier.width(180.dp),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = viewModel.appPrimaryColor,
+                                    activeTrackColor = viewModel.appPrimaryColor
+                                )
+                            )
+                        }
+                    }
+                }
 
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = provider.name,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White,
-                                            fontSize = 14.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-
-                                        if (provider.isVerified) {
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Icon(
-                                                imageVector = Icons.Default.Verified,
-                                                contentDescription = "Verified Tech",
-                                                tint = Color(0xFF2563EB),
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-
-                                        if (provider.isVip) {
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Card(
-                                                colors = CardDefaults.cardColors(containerColor = Color(0xFF78350F)),
-                                                shape = RoundedCornerShape(6.dp)
+                // 4. Horizontal elite recommendation cards
+                item {
+                    val recommendedTechs = viewModel.providers.filter { it.isVip || it.isVerified }
+                    if (recommendedTechs.isNotEmpty()) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "★ الكوادر الموصى بها ونخبة الـ VIP:",
+                                color = viewModel.appPrimaryColor,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            )
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                items(recommendedTechs) { tech ->
+                                    Card(
+                                        modifier = Modifier
+                                            .width(140.dp)
+                                            .border(
+                                                1.dp,
+                                                if (tech.isVip) viewModel.appPrimaryColor else Color.Gray,
+                                                RoundedCornerShape(8.dp)
+                                            ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF141414))
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(10.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(38.dp)
+                                                    .background(Color(0xFF0F0F0F), CircleShape),
+                                                contentAlignment = Alignment.Center
                                             ) {
-                                                Text(
-                                                    "VIP",
-                                                    color = Color(0xFFFBBF24),
-                                                    fontSize = 8.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                                )
+                                                Text(text = if (tech.isVip) "👑" else "★", fontSize = 18.sp)
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = tech.name,
+                                                color = Color.White,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = tech.specialty,
+                                                color = Color.LightGray,
+                                                fontSize = 9.sp,
+                                                maxLines = 1
+                                            )
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.Star, contentDescription = null, tint = viewModel.appPrimaryColor, modifier = Modifier.size(10.dp))
+                                                Spacer(modifier = Modifier.width(2.dp))
+                                                Text(text = tech.rating.toString(), color = Color.White, fontSize = 9.sp)
                                             }
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
 
-                                    Spacer(modifier = Modifier.height(4.dp))
-
+                // 5. Interactive Categories Click Row Shortcuts
+                item {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "■ فئات الخدمات السريعة تفاعلية:",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            viewModel.categories.take(5).forEach { cat ->
+                                val isSelected = selectedCategoryFilter == cat.nameAr
+                                Column(
+                                    modifier = Modifier
+                                        .clickable {
+                                            selectedCategoryFilter = if (isSelected) null else cat.nameAr
+                                        },
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(50.dp)
+                                            .background(
+                                                if (isSelected) viewModel.appPrimaryColor else Color(0xFF151515),
+                                                RoundedCornerShape(8.dp)
+                                            )
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) viewModel.appPrimaryColor else Color(0xFF252525),
+                                                RoundedCornerShape(8.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = cat.iconEmoji, fontSize = 24.sp)
+                                    }
+                                    Spacer(modifier = Modifier.height(3.dp))
                                     Text(
-                                        text = "${provider.specialty} • ${provider.residenceAddress}",
-                                        color = Color.LightGray,
-                                        fontSize = 12.sp,
-                                        maxLines = 1
+                                        text = cat.nameAr,
+                                        color = if (isSelected) viewModel.appPrimaryColor else Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
+                                }
+                            }
+                        }
+                    }
+                }
 
-                                    Spacer(modifier = Modifier.height(4.dp))
+                // 6. Geographic city filter buttons list
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Clear filter button
+                        FilterChip(
+                            selected = selectedCityFilter == null,
+                            onClick = { selectedCityFilter = null },
+                            label = { Text("الكل 🇾🇪", fontSize = 10.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = viewModel.appPrimaryColor,
+                                selectedLabelColor = Color.Black
+                            )
+                        )
+                        viewModel.cities.forEach { city ->
+                            val isSelected = selectedCityFilter == city.nameAr
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { selectedCityFilter = if (isSelected) null else city.nameAr },
+                                label = { Text(city.nameAr, fontSize = 10.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = viewModel.appPrimaryColor,
+                                    selectedLabelColor = Color.Black
+                                )
+                            )
+                        }
+                    }
+                }
 
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
-                                        Spacer(modifier = Modifier.width(2.dp))
+                // 6.5 Bookings section if enabled
+                if (viewModel.showBookingsSection) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF10141D)),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFF1E293B))
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "📅 حجز موعد ومتابعة الطلبات الجارية",
+                                        color = viewModel.appPrimaryColor,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    TextButton(onClick = { showNewBookingCreator = !showNewBookingCreator }) {
                                         Text(
-                                            text = "${provider.rating} تقييم الجودة",
-                                            color = Color.LightGray,
+                                            text = if (showNewBookingCreator) "إغلاق الحجز" else "طلب موعد جديد +",
+                                            color = Color.White,
                                             fontSize = 11.sp
                                         )
                                     }
                                 }
 
-                                IconButton(onClick = {
-                                    try {
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${provider.phone}"))
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "الرجاء الاتصال المباشر على الرقم: ${provider.phone}", Toast.LENGTH_SHORT).show()
-                                    }
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Phone,
-                                        contentDescription = "Call Provider",
-                                        tint = Color(0xFF10B981)
+                                if (showNewBookingCreator) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    TextField(
+                                        value = bookingCustomerName,
+                                        onValueChange = { bookingCustomerName = it },
+                                        placeholder = { Text("اسمك الكامل", fontSize = 11.sp, color = Color.Gray) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
                                     )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    TextField(
+                                        value = bookingCustomerPhone,
+                                        onValueChange = { bookingCustomerPhone = it },
+                                        placeholder = { Text("رقم الواتساب / الجوال", fontSize = 11.sp, color = Color.Gray) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    
+                                    // Technician Picker dropdown sim
+                                    Text(
+                                        text = "اختر كادراً فنياً للموعد:",
+                                        color = Color.LightGray,
+                                        fontSize = 11.sp,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        viewModel.providers.forEach { tech ->
+                                            val isChosen = selectedTechForBooking?.id == tech.id
+                                            FilterChip(
+                                                selected = isChosen,
+                                                onClick = { selectedTechForBooking = tech },
+                                                label = { Text(tech.name, fontSize = 9.sp) },
+                                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = viewModel.appPrimaryColor, selectedLabelColor = Color.Black)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Button(
+                                        onClick = {
+                                            if (bookingCustomerName.isEmpty() || bookingCustomerPhone.isEmpty() || selectedTechForBooking == null) {
+                                                Toast.makeText(context, "الرجاء إدخال البيانات وتحديد الفني المناسب للحجز أولاً.", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                val newB = Booking(
+                                                    customerName = bookingCustomerName,
+                                                    customerPhone = bookingCustomerPhone,
+                                                    techName = selectedTechForBooking!!.name,
+                                                    date = bookingDateStr,
+                                                    time = bookingTimeStr
+                                                )
+                                                viewModel.bookings = viewModel.bookings + newB
+                                                bookingCustomerName = ""
+                                                bookingCustomerPhone = ""
+                                                showNewBookingCreator = false
+                                                Toast.makeText(context, "تم إرسال طلب الحجز بنجاح للاستجابة السريعة! حالة الطلب: معلق", Toast.LENGTH_LONG).show()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("تأكيد حجز موعد المباشر مع الفني", color = Color.Black, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+
+                                // Show active bookings count
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "الحجوزات النشطة بحسابك (${viewModel.bookings.size}):",
+                                    color = Color.LightGray,
+                                    fontSize = 11.sp
+                                )
+                                viewModel.bookings.forEach { book ->
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B2330))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(book.customerName, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                Text("كادر: ${book.techName} • ${book.date}", color = Color.LightGray, fontSize = 10.sp)
+                                            }
+                                            val badgeColor = when (book.status) {
+                                                "مقبول" -> Color(0xFF047857)
+                                                "مكتمل" -> Color(0xFF1D4ED8)
+                                                "مرفوض" -> Color(0xFFB91C1C)
+                                                else -> Color(0xFFD97706)
+                                            }
+                                            Card(colors = CardDefaults.cardColors(containerColor = badgeColor)) {
+                                                Text(book.status, color = Color.White, fontSize = 9.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
+                // 7. Dynamic Technician List
+                item {
+                    Text(
+                        text = "قائمة الأخصائيين المسجلين بالدليل والنشطين حالياً (${activeAndApprovedProviders.size}):",
+                        color = viewModel.appPrimaryColor,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+
+                if (activeAndApprovedProviders.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "لا توجد نتائج مطابقة لبحثك في محافظة/مدينة الفرز المحددة أو النطاق الجغرافي المحدد.",
+                                color = Color.Gray,
+                                fontSize = 11.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    items(activeAndApprovedProviders) { tech ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(
+                                    1.dp,
+                                    if (tech.isVip) viewModel.appPrimaryColor else Color(0xFF262626),
+                                    RoundedCornerShape(12.dp)
+                                ),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF151515))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Avatar representation emoji
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .background(Color(0xFF0F0F0F), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = if (tech.isMale) "👨‍🔧" else "👩‍🔧", fontSize = 22.sp)
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = tech.name,
+                                                color = Color.White,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            if (tech.isVerified) {
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Icon(
+                                                    imageVector = Icons.Default.Verified,
+                                                    contentDescription = "Verified badge",
+                                                    tint = Color(0xFF2563EB),
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                            if (tech.isVip) {
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Card(
+                                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF78350F)),
+                                                    shape = RoundedCornerShape(4.dp)
+                                                ) {
+                                                    Text(
+                                                        "VIP",
+                                                        color = Color(0xFFFFD700),
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            text = "${tech.specialty} • ${tech.city}",
+                                            color = Color.LightGray,
+                                            fontSize = 11.sp
+                                        )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Star, contentDescription = null, tint = viewModel.appPrimaryColor, modifier = Modifier.size(12.dp))
+                                            Spacer(modifier = Modifier.width(2.dp))
+                                            Text(
+                                                text = "${tech.rating} (${tech.ratingsCount} تقييمات) • ✓ متاح للعمل اللحظي",
+                                                color = Color(0xFF10B981),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = tech.biography,
+                                    color = Color.LightGray,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(horizontal = 2.dp)
+                                )
+
+                                Spacer(modifier = Modifier.height(10.dp))
+                                // Diagnostic inspection fee
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF262626), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("💰 قيمة المعاينة والتشخيص الأولي بالمنزل:", color = Color.LightGray, fontSize = 10.sp)
+                                        Text("${tech.baseFee} ريال يمني", color = viewModel.appPrimaryColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                // Action Rows
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    // Call Direct
+                                    Button(
+                                        onClick = {
+                                            try {
+                                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${tech.phone}"))
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "الرقم المسجل: ${tech.phone}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF064E3B)),
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("اتصل 📞", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+
+                                    // WhatsApp Direct
+                                    Button(
+                                        onClick = {
+                                            try {
+                                                val waUri = Uri.parse("https://wa.me/967${tech.phone}")
+                                                val intent = Intent(Intent.ACTION_VIEW, waUri)
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "رقم الجوال: ${tech.phone}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20)),
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("واتساب 💬", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+
+                                    // Map Navigation
+                                    Button(
+                                        onClick = {
+                                            if (tech.latitude != null && tech.longitude != null) {
+                                                try {
+                                                    val mapUri = Uri.parse("google.navigation:q=${tech.latitude},${tech.longitude}")
+                                                    val intent = Intent(Intent.ACTION_VIEW, mapUri)
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    val webUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${tech.latitude},${tech.longitude}")
+                                                    context.startActivity(Intent(Intent.ACTION_VIEW, webUri))
+                                                }
+                                            } else {
+                                                Toast.makeText(context, "لم يقرر الكادر بعد إحداثيات GPS الدقيقة لخرائط الرادار.", Toast.LENGTH_LONG).show()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F2937)),
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("الاتجاهات 📍", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+
+                                    // Rating custom modal trigger
+                                    Button(
+                                        onClick = {
+                                            selectedProviderForRating = tech
+                                            ratingStarsSelected = 5
+                                            ratingCommentText = ""
+                                            showRatingDialog = true
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF78350F)),
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("تقييم ⭐", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 8. User loyalty points promotion card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                        border = BorderStroke(1.dp, viewModel.appPrimaryColor)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "🎁 رصيد نقاط الولاء الخاصة بك بالدليل الحالي: ${viewModel.userLoyaltyPoints} نقطة",
+                                color = viewModel.appPrimaryColor,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "استبدل خصم 100 نقطة فوري لتقليل كلفة الزيارات بمقدار 5000 ريال يمني!",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = {
+                                    if (viewModel.userLoyaltyPoints >= 100) {
+                                        viewModel.userLoyaltyPoints -= 100
+                                        Toast.makeText(
+                                            context,
+                                            "🎉 تهانينا! كود الخصم المعياري مفعل حالياً لوالتك بقيمة 5000 ريال يمني على طلباتك القادمة: DALILI-YEM-2026",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "عذراً، رصيدك هو ${viewModel.userLoyaltyPoints} نقطة، تحتاج 100 نقطة كحد أدنى للاستبدال.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("استبدل الـ 100 نقطة الآن", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+
+                // 9. Simple bottom footer info as in image layout specs
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "عن المنصة وبنود الدليل",
+                                color = Color.LightGray,
+                                fontSize = 11.sp,
+                                modifier = Modifier
+                                    .clickable {
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                "الدليل الشامل اليمني للخدمات المهنية الفورية - نسخة 2026 مع كود محصن لتلافي أخطاء وقت التشغيل.",
+                                                Toast.LENGTH_LONG
+                                            )
+                                            .show()
+                                    }
+                            )
+
+                            // Tapped version 7 times backdoor gate
+                            Text(
+                                text = "MAW 777644670 V2.6.2026",
+                                color = viewModel.appPrimaryColor,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.clickable {
+                                    secretFooterVersionTapCount++
+                                    if (secretFooterVersionTapCount >= 7) {
+                                        secretFooterVersionTapCount = 0
+                                        Toast.makeText(context, "🎯 فتح بوابة لوحة التحكم الإدارية عبر الإصدار!", Toast.LENGTH_SHORT).show()
+                                        onNavigateToAdmin()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
             }
 
-            // Application Bottom descriptive info bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF1E293B))
-                    .padding(8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = settings.footerText,
-                    color = Color(0xFFD4AF37),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
+            // 10. Instant Chat Floating Message Room Bubble
+            if (viewModel.chatSettingsVisible && !viewModel.chatSettingsDeleted && viewModel.isChatInstantEnabled) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 16.dp, bottom = 14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(viewModel.chatSettingsIconSize.dp)
+                            .background(viewModel.chatSettingsIconColor, CircleShape)
+                            .clickable {
+                                // Default pick session
+                                selectSessionForChat = viewModel.chatSessions.firstOrNull()
+                                showChatConversationPanel = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Chat,
+                            contentDescription = "الدردشة الفورية",
+                            tint = Color.White,
+                            modifier = Modifier.size((viewModel.chatSettingsIconSize / 2.5f).dp)
+                        )
+                    }
+                }
             }
         }
     }
 
-    // --- DIALOG DETAIL VIEW FOR SELECTED PROVIDER ---
-    if (selectedProviderForDetail != null) {
-        val p = selectedProviderForDetail!!
+    // --- DIALOG POPUP: RATE PROVIDER DESIGN ---
+    if (showRatingDialog && selectedProviderForRating != null) {
+        val tech = selectedProviderForRating!!
         AlertDialog(
-            onDismissRequest = { selectedProviderForDetail = null },
+            onDismissRequest = { showRatingDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Badge, contentDescription = null, tint = Color(0xFFD4AF37))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "بطاقة معطيات المهني", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("⭐", fontSize = 24.sp, modifier = Modifier.padding(end = 4.dp))
+                    Text("تقييم المهني الفني", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             },
             text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text("اسم المهني: ${p.name}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text("التخصص الفني: ${p.specialty}", color = Color.LightGray, fontSize = 13.sp)
-                    Text("رقم التواصل: ${p.phone}", color = Color.LightGray, fontSize = 13.sp)
-                    Text("المقر والمنطقه: ${p.residenceAddress}", color = Color.LightGray, fontSize = 13.sp)
-                    if (p.businessAddress.isNotEmpty()) {
-                        Text("عنوان العمل: ${p.businessAddress}", color = Color.LightGray, fontSize = 13.sp)
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // GOOGLE MAPS CARD IN PROVIDER PAGE
-                    Text("🗺️ خريطة الموقع الجغرافي:", color = Color(0xFFD4AF37), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    if (p.latitude != null && p.longitude != null && !p.isMapDisabled) {
-                        GoogleMapView(latitude = p.latitude, longitude = p.longitude, providerName = p.name)
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Directions button to open Google Maps navigation!
-                        Button(
-                            onClick = {
-                                try {
-                                    val gmmIntentUri = Uri.parse("google.navigation:q=${p.latitude},${p.longitude}")
-                                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri).apply {
-                                        setPackage("com.google.android.apps.maps")
-                                    }
-                                    context.startActivity(mapIntent)
-                                } catch (e: Exception) {
-                                    // Fallback to web link
-                                    val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}"))
-                                    context.startActivity(webIntent)
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF064E3B)),
-                            modifier = Modifier.fillMaxWidth().height(36.dp),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(Icons.Default.Directions, contentDescription = null, tint = Color(0xFFD4AF37), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("الاتجاهات وفتح خرائط Google", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(120.dp)
-                                .background(Color(0xFF0F172A), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("الموقع الجغرافي غير متوفر لهذا الفني", color = Color.Gray, fontSize = 11.sp)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // True Chat with Provider Option
-                    val visitorPhone = "VISITOR_GUEST"
-                    Button(
-                        onClick = {
-                            if (!settings.chatEnabledForVisitors) {
-                                Toast.makeText(context, settings.chatDisabledMessage, Toast.LENGTH_LONG).show()
-                                return@Button
-                            }
-
-                            // Block verification
-                            val blockedList = settings.blockedChatUsers.split(",")
-                                .map { it.trim() }
-                                .filter { it.isNotEmpty() }
-                            if (blockedList.contains(visitorPhone)) {
-                                Toast.makeText(context, "حقوق الدردشة معطلة لحسابك حالياً.", Toast.LENGTH_LONG).show()
-                                return@Button
-                            }
-
-                            // Setup session and open chat screen
-                            val sess = ChatSession(
-                                id = "",
-                                participants = listOf(visitorPhone, p.phone),
-                                initiatorName = "زائر الدليل مستقل",
-                                initiatorPhone = visitorPhone,
-                                providerName = p.name,
-                                providerPhone = p.phone,
-                                lastMessage = "بدء استفسار تقديم الخدمة",
-                                lastUpdated = System.currentTimeMillis()
-                            )
-
-                            FirebaseService.createChatSession(sess, { finalId ->
-                                selectedProviderForDetail = null
-                                onNavigateToChatWithSession(finalId)
-                            }, {
-                                Toast.makeText(context, "فشل إنشاء مسار المحادثة", Toast.LENGTH_SHORT).show()
-                            })
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp),
-                        shape = RoundedCornerShape(12.dp)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "ما هو تقييم جودة معاينات وسلوك الفني: ${tech.name}؟",
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(Icons.Default.Chat, contentDescription = null, tint = Color.Black)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("بدء دردشة فورية بالدليل 💬", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        for (i in 1..5) {
+                            Text(
+                                text = if (i <= ratingStarsSelected) "★" else "☆",
+                                color = if (i <= ratingStarsSelected) viewModel.appPrimaryColor else Color.Gray,
+                                fontSize = 38.sp,
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .clickable { ratingStarsSelected = i }
+                            )
+                        }
                     }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TextField(
+                        value = ratingCommentText,
+                        onValueChange = { ratingCommentText = it },
+                        placeholder = { Text("اكتب تعليقك بخصوص نزاهة الفني والتزامه بالمواعيد...", color = Color.Gray, fontSize = 11.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF050505),
+                            unfocusedContainerColor = Color(0xFF050505)
+                        )
+                    )
                 }
             },
-            confirmButton = {},
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.userLoyaltyPoints += 15
+                        Toast.makeText(
+                            context,
+                            "تم إرسال تقييمك بـ $ratingStarsSelected نجمة بنجاح! مضاف لرصيدك +15 نقطة ولاء 🎁",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        showRatingDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor)
+                ) {
+                    Text("إرسال التقييم المعتمد", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                }
+            },
             dismissButton = {
-                TextButton(onClick = { selectedProviderForDetail = null }) {
-                    Text("إغلاق", color = Color.White)
+                TextButton(onClick = { showRatingDialog = false }) {
+                    Text("إلغاء", color = Color.White)
                 }
             },
             containerColor = Color(0xFF1E293B)
         )
     }
+
+    // --- DIALOG POPUP: FULL CHAT MESSAGE FLOW PANEL ---
+    if (showChatConversationPanel && selectSessionForChat != null) {
+        val s = selectSessionForChat!!
+        AlertDialog(
+            onDismissRequest = { showChatConversationPanel = false },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("💬", fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                            Text(s.techName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("دردشة العميل: ${s.userName}", color = Color.Gray, fontSize = 10.sp)
+                        }
+                    }
+                    if (s.isBlocked) {
+                        Card(colors = CardDefaults.cardColors(containerColor = Color.Red)) {
+                            Text("محظور", color = Color.White, fontSize = 9.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                        }
+                    }
+                }
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .background(Color.Black, RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            reverseLayout = false
+                        ) {
+                            val activeMsgs = viewModel.chatMessages
+                            items(activeMsgs) { msg ->
+                                val isMe = msg.senderRole == "user"
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = if (isMe) Alignment.CenterLeft else Alignment.CenterRight
+                                ) {
+                                    Card(
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isMe) viewModel.appPrimaryColor else Color(0xFF1E293B)
+                                        )
+                                    ) {
+                                        Column(modifier = Modifier.padding(8.dp)) {
+                                            Text(
+                                                text = msg.senderName,
+                                                color = if (isMe) Color.Black else viewModel.appPrimaryColor,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = msg.messageText,
+                                                color = if (isMe) Color.Black else Color.White,
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (s.isBlocked) {
+                        Text(
+                            text = "عذراً، لقد تم تجميد صلاحيات إرسال الرسائل الخاصة بك من قبل الأدمن لضمان الخصوصية.",
+                            color = Color.Red,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextField(
+                                value = newChatMessageInput,
+                                onValueChange = { newChatMessageInput = it },
+                                placeholder = { Text("اكتب رسالتك هنا...", color = Color.Gray, fontSize = 11.sp) },
+                                modifier = Modifier.weight(1f),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color(0xFF1C2533),
+                                    unfocusedContainerColor = Color(0xFF1C2533)
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            IconButton(
+                                onClick = {
+                                    if (newChatMessageInput.isNotEmpty()) {
+                                        val m = ChatMessage(
+                                            chatId = "1",
+                                            senderName = s.userName,
+                                            senderRole = "user",
+                                            messageText = newChatMessageInput
+                                        )
+                                        viewModel.chatMessages = viewModel.chatMessages + m
+                                        s.lastMessage = newChatMessageInput
+                                        newChatMessageInput = ""
+                                        
+                                        // Auto simulating tech reply in 1.5 seconds
+                                        coroutineScope.launch {
+                                            delay(1500)
+                                            val responseMsg = ChatMessage(
+                                                chatId = "1",
+                                                senderName = s.techName,
+                                                senderRole = "tech",
+                                                messageText = "شكراً لتواصلك مع دليلي يمن؛ سأقوم بمعاينة طلبك والرد فوراً!"
+                                            )
+                                            viewModel.chatMessages = viewModel.chatMessages + responseMsg
+                                            s.lastMessage = responseMsg.messageText
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.background(viewModel.appPrimaryColor, RoundedCornerShape(8.dp))
+                            ) {
+                                Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.Black)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showChatConversationPanel = false }) {
+                    Text("إغلاق", color = Color.White)
+                }
+            },
+            containerColor = Color(0xFF111E2E)
+        )
+    }
 }
 
 @Composable
-fun GoogleMapView(latitude: Double, longitude: Double, providerName: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-            .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.Map,
-                contentDescription = null,
-                tint = Color(0xFFD4AF37),
-                modifier = Modifier.size(36.dp)
+fun AutoMarqueeText(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.White,
+    fontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
+    fontWeight: FontWeight = FontWeight.Bold,
+    speedMs: Int = 45
+) {
+    val scrollState = rememberScrollState()
+    
+    LaunchedEffect(key1 = text) {
+        while (true) {
+            scrollState.animateScrollTo(
+                value = scrollState.value + 4,
+                animationSpec = tween(durationMillis = speedMs, easing = LinearEasing)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "📍 خريطة موقع مقدم الخدمة الجغرافية ($providerName)",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "الإحداثيات النشطة: Lat: $latitude، Lng: $longitude",
-                color = Color.LightGray,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "انقر فوق زر 'عرض الاتجاهات' أدناه لفتح المسار والملاحة الفورية عبر خرائط Google مباشرة بدقة 100%.",
-                color = Color.Gray,
-                fontSize = 10.sp,
-                lineHeight = 14.sp,
-                textAlign = TextAlign.Center
-            )
+            if (scrollState.value >= scrollState.maxValue) {
+                scrollState.scrollTo(0)
+            }
         }
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(scrollState, enabled = false),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = text,
+            color = color,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            maxLines = 1,
+            overflow = TextOverflow.Visible,
+            modifier = Modifier.padding(end = 60.dp)
+        )
+        Text(
+            text = text,
+            color = color,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            maxLines = 1,
+            overflow = TextOverflow.Visible
+        )
     }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "دليل خدمات يمن WAM",
+  "name": "خدمات اليمن - Dalili",
   "description": "دليل خدمات يمني فاخر يربط المستخدمين بمقدمي الخدمات وبوابة تحكم ذكية",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

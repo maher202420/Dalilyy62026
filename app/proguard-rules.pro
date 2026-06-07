@@ -1,3 +1,2 @@
-# ProGuard rules for Serviseyem
--keepattributes Signature
--keepattributes *Annotation*
+# Add project specific ProGuard rules here.
+# You can control code shrinking, obfuscation, and optimization.
