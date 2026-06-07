@@ -13,6 +13,7 @@ val GoldAccentColor = Color(0xFFFFD700)
 @Composable
 fun ServisEmTheme(
     primaryColor: Color = GoldAccentColor,
+    fontFamily: androidx.compose.ui.text.font.FontFamily = androidx.compose.ui.text.font.FontFamily.Default,
     content: @Composable () -> Unit
 ) {
     val dynamicColorScheme = darkColorScheme(
@@ -25,8 +26,21 @@ fun ServisEmTheme(
         onSecondary = Color.LightGray
     )
 
+    val customTypography = androidx.compose.material3.Typography(
+        bodyLarge = androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+        bodyMedium = androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+        bodySmall = androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+        titleLarge = androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+        titleMedium = androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+        titleSmall = androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+        labelLarge = androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+        labelMedium = androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+        labelSmall = androidx.compose.ui.text.TextStyle(fontFamily = fontFamily)
+    )
+
     MaterialTheme(
         colorScheme = dynamicColorScheme,
+        typography = customTypography,
         content = content
     )
 }

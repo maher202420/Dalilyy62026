@@ -71,6 +71,7 @@ fun MainScreen(
     var showChatConversationPanel by remember { mutableStateOf(false) }
     var selectSessionForChat by remember { mutableStateOf<ChatSession?>(null) }
     var newChatMessageInput by remember { mutableStateOf("") }
+    var showAboutAppDialog by remember { mutableStateOf(false) }
 
     // Backdoor secret tapping indicator
     var secretHeaderFlagTapCount by remember { mutableIntStateOf(0) }
@@ -889,55 +890,63 @@ fun MainScreen(
                     }
                 }
 
-                // 8. User loyalty points promotion card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-                        border = BorderStroke(1.dp, viewModel.appPrimaryColor)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                // 8. User loyalty points promotion card (Controlled by Admin in settings)
+                if (viewModel.showLoyaltySection) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                            border = BorderStroke(1.dp, viewModel.appPrimaryColor)
                         ) {
-                            Text(
-                                text = "🎁 رصيد نقاط الولاء الخاصة بك بالدليل الحالي: ${viewModel.userLoyaltyPoints} نقطة",
-                                color = viewModel.appPrimaryColor,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "استبدل خصم 100 نقطة فوري لتقليل كلفة الزيارات بمقدار 5000 ريال يمني!",
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Button(
-                                onClick = {
-                                    if (viewModel.userLoyaltyPoints >= 100) {
-                                        viewModel.userLoyaltyPoints -= 100
-                                        Toast.makeText(
-                                            context,
-                                            "🎉 تهانينا! كود الخصم المعياري مفعل حالياً لوالتك بقيمة 5000 ريال يمني على طلباتك القادمة: DALILI-YEM-2026",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            "عذراً، رصيدك هو ${viewModel.userLoyaltyPoints} نقطة، تحتاج 100 نقطة كحد أدنى للاستبدال.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor),
-                                shape = RoundedCornerShape(8.dp)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(viewModel.loyaltyCardHeightPadding.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("استبدل الـ 100 نقطة الآن", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                Text(
+                                    text = try {
+                                        viewModel.loyaltyCardTitle.format(viewModel.userLoyaltyPoints)
+                                    } catch (e: Exception) {
+                                        "🎁 رصيد نقاط الولاء: ${viewModel.userLoyaltyPoints} نقطة"
+                                    },
+                                    color = viewModel.appPrimaryColor,
+                                    fontSize = viewModel.loyaltyCardProgressSize.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = viewModel.appFontFamily
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = viewModel.loyaltyCardText,
+                                    color = Color.White,
+                                    fontSize = (viewModel.loyaltyCardProgressSize - 2f).sp,
+                                    textAlign = TextAlign.Center,
+                                    fontFamily = viewModel.appFontFamily
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Button(
+                                    onClick = {
+                                        if (viewModel.userLoyaltyPoints >= 100) {
+                                            viewModel.userLoyaltyPoints -= 100
+                                            Toast.makeText(
+                                                context,
+                                                "🎉 تهانينا! كود الخصم المعياري مفعل حالياً لوالتك بقيمة 5000 ريال يمني على طلباتك القادمة: DALILI-YEM-2026",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "عذراً، رصيدك هو ${viewModel.userLoyaltyPoints} نقطة، تحتاج 100 نقطة كحد أدنى للاستبدال.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("استبدل الـ 100 نقطة الآن", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp, fontFamily = viewModel.appFontFamily)
+                                }
                             }
                         }
                     }
@@ -957,27 +966,23 @@ fun MainScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "عن المنصة وبنود الدليل",
+                                "عن المنصة وبنود الدليل ℹ️",
                                 color = Color.LightGray,
                                 fontSize = 11.sp,
+                                fontFamily = viewModel.appFontFamily,
                                 modifier = Modifier
                                     .clickable {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                "الدليل الشامل اليمني للخدمات المهنية الفورية - نسخة 2026 مع كود محصن لتلافي أخطاء وقت التشغيل.",
-                                                Toast.LENGTH_LONG
-                                            )
-                                            .show()
+                                        showAboutAppDialog = true
                                     }
                             )
 
                             // Tapped version 7 times backdoor gate
                             Text(
-                                text = "MAW 777644670 V2.6.2026",
+                                text = viewModel.footerText,
                                 color = viewModel.appPrimaryColor,
-                                fontSize = 11.sp,
+                                fontSize = viewModel.footerFontSize.sp,
                                 fontWeight = FontWeight.SemiBold,
+                                fontFamily = viewModel.appFontFamily,
                                 modifier = Modifier.clickable {
                                     secretFooterVersionTapCount++
                                     if (secretFooterVersionTapCount >= 7) {
@@ -1141,7 +1146,7 @@ fun MainScreen(
                                 val isMe = msg.senderRole == "user"
                                 Box(
                                     modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = if (isMe) Alignment.CenterLeft else Alignment.CenterRight
+                                    contentAlignment = if (isMe) Alignment.CenterStart else Alignment.CenterEnd
                                 ) {
                                     Card(
                                         shape = RoundedCornerShape(8.dp),
@@ -1178,50 +1183,68 @@ fun MainScreen(
                     } else {
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             TextField(
                                 value = newChatMessageInput,
                                 onValueChange = { newChatMessageInput = it },
-                                placeholder = { Text("اكتب رسالتك هنا...", color = Color.Gray, fontSize = 11.sp) },
+                                placeholder = { Text("اكتب رسالتك كعميل هنا...", color = Color.LightGray, fontSize = 11.sp, fontFamily = viewModel.appFontFamily) },
+                                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 12.sp, fontFamily = viewModel.appFontFamily),
                                 modifier = Modifier.weight(1f),
                                 colors = TextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
                                     focusedContainerColor = Color(0xFF1C2533),
-                                    unfocusedContainerColor = Color(0xFF1C2533)
-                                )
+                                    unfocusedContainerColor = Color(0xFF1C2533),
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                singleLine = true
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            IconButton(
-                                onClick = {
-                                    if (newChatMessageInput.isNotEmpty()) {
-                                        val m = ChatMessage(
-                                            chatId = "1",
-                                            senderName = s.userName,
-                                            senderRole = "user",
-                                            messageText = newChatMessageInput
-                                        )
-                                        viewModel.chatMessages = viewModel.chatMessages + m
-                                        s.lastMessage = newChatMessageInput
-                                        newChatMessageInput = ""
-                                        
-                                        // Auto simulating tech reply in 1.5 seconds
-                                        coroutineScope.launch {
-                                            delay(1500)
-                                            val responseMsg = ChatMessage(
+                            Spacer(modifier = Modifier.width(8.dp))
+                            // Solid styled box for Send Button to avoid clipping or sizing issues in alert dialogs
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .background(viewModel.appPrimaryColor, RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        if (newChatMessageInput.isNotEmpty()) {
+                                            val m = ChatMessage(
                                                 chatId = "1",
-                                                senderName = s.techName,
-                                                senderRole = "tech",
-                                                messageText = "شكراً لتواصلك مع دليلي يمن؛ سأقوم بمعاينة طلبك والرد فوراً!"
+                                                senderName = s.userName,
+                                                senderRole = "user",
+                                                messageText = newChatMessageInput
                                             )
-                                            viewModel.chatMessages = viewModel.chatMessages + responseMsg
-                                            s.lastMessage = responseMsg.messageText
+                                            viewModel.chatMessages = viewModel.chatMessages + m
+                                            s.lastMessage = newChatMessageInput
+                                            newChatMessageInput = ""
+                                            
+                                            // Auto simulating tech reply in 1.5 seconds
+                                            coroutineScope.launch {
+                                                delay(1500)
+                                                val responseMsg = ChatMessage(
+                                                    chatId = "1",
+                                                    senderName = s.techName,
+                                                    senderRole = "tech",
+                                                    messageText = "مرحباً بك يا غالي تواصلك محط اهتمامي، سأتواجد لقضاء العمل فوراً!"
+                                                )
+                                                viewModel.chatMessages = viewModel.chatMessages + responseMsg
+                                                s.lastMessage = responseMsg.messageText
+                                            }
                                         }
-                                    }
-                                },
-                                modifier = Modifier.background(viewModel.appPrimaryColor, RoundedCornerShape(8.dp))
+                                    },
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.Black)
+                                Icon(
+                                    imageVector = Icons.Default.Send,
+                                    contentDescription = "Send",
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
@@ -1229,7 +1252,106 @@ fun MainScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showChatConversationPanel = false }) {
-                    Text("إغلاق", color = Color.White)
+                    Text("إغلاق", color = Color.White, fontFamily = viewModel.appFontFamily)
+                }
+            },
+            containerColor = Color(0xFF111E2E)
+        )
+    }
+
+    // --- DIALOG POPUP: ABOUT APPLICATION WITH DOWNLOAD SHARING IMAGE PRESETS ---
+    if (showAboutAppDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutAppDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("ℹ️ عن دليل خدمات اليمن", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = viewModel.appFontFamily)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Logo Image or Emoji display
+                    if (viewModel.appInfoUploadedImagePath != null) {
+                        coil.compose.AsyncImage(
+                            model = viewModel.appInfoUploadedImagePath,
+                            contentDescription = "App Logo Image",
+                            modifier = Modifier
+                                .size(70.dp)
+                                .background(Color(0xFF1B2330), RoundedCornerShape(10.dp))
+                                .padding(4.dp)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(70.dp)
+                                .background(Color(0xFF1B2330), RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(viewModel.appInfoImageEmoji, fontSize = 38.sp)
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = "الدليل الوطني لربط المهنيين بالعملاء 🇾🇪",
+                        color = viewModel.appPrimaryColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        fontFamily = viewModel.appFontFamily
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "تطبيق صمم بتقاطعات هندسية عالية لتمكين البحث السريع، والمحادثات المباشرة الفورية والدقيقة.",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center,
+                        fontFamily = viewModel.appFontFamily
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2533))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("رابط التنزيل المباشر المتاح للمشاركة:", color = Color.Gray, fontSize = 9.sp, fontFamily = viewModel.appFontFamily)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = viewModel.appDownloadLink,
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(android.content.Intent.EXTRA_TEXT, "بوابة خدمات اليمن للكوادر المهنية الفورية! حمل التطبيق الآن: ${viewModel.appDownloadLink}")
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "مشاركة رابط التحميل"))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor),
+                                shape = RoundedCornerShape(6.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Text("مشاركة الرابط الآن 🔗", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = viewModel.appFontFamily)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAboutAppDialog = false }) {
+                    Text("إغلاق الشاشة", color = Color.White, fontFamily = viewModel.appFontFamily)
                 }
             },
             containerColor = Color(0xFF111E2E)

@@ -1070,6 +1070,37 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                             }
                         }
 
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text("اختر نوع وحجم الخط الشائع بالدليل الموحد:", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val fontOptions = listOf(
+                                "Default" to "الافتراضي",
+                                "Monospace" to "أحادي",
+                                "Serif" to "شريفي",
+                                "Cursive" to "رقعة"
+                            )
+                            fontOptions.forEach { pair ->
+                                val isSelected = viewModel.appSelectedFontName == pair.first
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(30.dp)
+                                        .background(if (isSelected) viewModel.appPrimaryColor else Color(0xFF2E2E3E), RoundedCornerShape(4.dp))
+                                        .clickable {
+                                            viewModel.appSelectedFontName = pair.first
+                                            viewModel.addActivityLog("تعديل الخط المعياري للتطبيق إلى ${pair.second}")
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(pair.second, color = if (isSelected) Color.Black else Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(14.dp))
                         Divider(color = Color.DarkGray)
                         Spacer(modifier = Modifier.height(10.dp))
@@ -1230,21 +1261,38 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                         Spacer(modifier = Modifier.height(10.dp))
 
                         // Part D: Edit terms
-                        Text("د. إدارة شروط تسجيل مقدمي الخدمات والتوجيهات:", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        viewModel.registrationTerms.forEach { term ->
+                        Text("د. إدارة شروط تسجيل مقدمي الخدمات والتوجيهات للتعديل والحذف:", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        viewModel.registrationTerms.forEachIndexed { index, term ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("• ${term.termText}", color = Color.LightGray, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                                var currentText by remember(term.termText) { mutableStateOf(term.termText) }
+                                TextField(
+                                    value = currentText,
+                                    onValueChange = { 
+                                        currentText = it
+                                        val updatedList = viewModel.registrationTerms.toMutableList()
+                                        updatedList[index] = term.copy(termText = it)
+                                        viewModel.registrationTerms = updatedList
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                        focusedContainerColor = Color(0xFF1E2129),
+                                        unfocusedContainerColor = Color(0xFF14161A)
+                                    ),
+                                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, fontFamily = viewModel.appFontFamily)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
                                 IconButton(onClick = {
                                     viewModel.registrationTerms = viewModel.registrationTerms.filter { it.id != term.id }
                                     Toast.makeText(context, "تم إزالة الشرط المذكور بنجاح.", Toast.LENGTH_SHORT).show()
                                 }) {
-                                    Icon(Icons.Default.RemoveCircle, contentDescription = "Remove", tint = Color.Red, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Delete, contentDescription = "Remove", tint = Color.Red, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
@@ -1259,7 +1307,12 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                                 onValueChange = { textTermInput = it },
                                 placeholder = { Text("أضف شرطاً جديداً لضم الكوادر...", fontSize = 11.sp) },
                                 modifier = Modifier.weight(1f),
-                                colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                                colors = TextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color.Black, 
+                                    unfocusedContainerColor = Color.Black
+                                )
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Button(
@@ -1307,6 +1360,212 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("تطهير الذاكرة العشوائية وسلسلة الكاش الآن", color = Color.White, fontSize = 11.sp)
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Divider(color = Color.DarkGray)
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Part F: Firestore footer sync settings
+                        Text("و. تعديل تذييل التطبيق والمزامنة الفورية مع السحابة (Firestore):", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        
+                        var footerTextInputVal by remember(viewModel.footerText) { mutableStateOf(viewModel.footerText) }
+                        var footerFontSizeInputVal by remember { mutableFloatStateOf(viewModel.footerFontSize) }
+
+                        TextField(
+                            value = footerTextInputVal,
+                            onValueChange = {
+                                footerTextInputVal = it
+                                viewModel.updateFooterTextFromFirestore(it, footerFontSizeInputVal)
+                            },
+                            label = { Text("محتوى نص التسييل بدلاً من 'wam2026'", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Black,
+                                unfocusedContainerColor = Color.Black
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("حجم خط التذييل: ${footerFontSizeInputVal.toInt()} sp", color = Color.LightGray, fontSize = 11.sp)
+                            Slider(
+                                value = footerFontSizeInputVal,
+                                onValueChange = {
+                                    footerFontSizeInputVal = it
+                                    viewModel.updateFooterTextFromFirestore(footerTextInputVal, it)
+                                },
+                                valueRange = 8f..24f,
+                                modifier = Modifier.width(180.dp),
+                                colors = SliderDefaults.colors(viewModel.appPrimaryColor, activeTrackColor = viewModel.appPrimaryColor)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Divider(color = Color.DarkGray)
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Part G: About app config
+                        Text("ز. إعدادات شاشة (عن التطبيق) ومشاركتها ورابط التحميل:", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        TextField(
+                            value = viewModel.appDownloadLink,
+                            onValueChange = { 
+                                viewModel.appDownloadLink = it 
+                                viewModel.addActivityLog("تعديل رابط تحميل التطبيق إلى: $it")
+                            },
+                            label = { Text("رابط تحميل التطبيق المتاح للمشاركة", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Black,
+                                unfocusedContainerColor = Color.Black
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("اختر الصورة/اللوجو المعبر عن التطبيق:", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val logoPresets = listOf(
+                                "📱" to "جوال",
+                                "🛠️" to "صيانة",
+                                "🇾🇪" to "اليمن",
+                                "🌟" to "مميز"
+                            )
+                            logoPresets.forEach { item ->
+                                val isSelected = viewModel.appInfoImageEmoji == item.first && viewModel.appInfoUploadedImagePath == null
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(34.dp)
+                                        .background(if (isSelected) viewModel.appPrimaryColor else Color(0xFF1E293B), RoundedCornerShape(6.dp))
+                                        .clickable {
+                                            viewModel.appInfoImageEmoji = item.first
+                                            viewModel.appInfoUploadedImagePath = null
+                                            viewModel.addActivityLog("تصفح واختيار أيقونة المعلومات: ${item.second}")
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("${item.first} ${item.second}", color = if (isSelected) Color.Black else Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextField(
+                            value = viewModel.appInfoUploadedImagePath ?: "",
+                            onValueChange = { 
+                                viewModel.appInfoUploadedImagePath = if (it.isEmpty()) null else it 
+                                viewModel.addActivityLog("تعديل رابط الصورة المخصصة لمعلومات التطبيق")
+                            },
+                            label = { Text("أو أدخل رابط صورة مخصصة (URL/Path)", fontSize = 10.sp) },
+                            placeholder = { Text("مثال: https://yem.com/logo.png") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Black,
+                                unfocusedContainerColor = Color.Black
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Divider(color = Color.DarkGray)
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Part H: Loyalty points toggle and size control
+                        Text("ح. لوحة إدارة صندوق الولاء والاستبدال بالرئيسية:", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("تنشيط / إظهار قسم نقاط الولاء بالواجهة الرئيسية:", color = Color.White, fontSize = 11.sp)
+                            Switch(
+                                checked = viewModel.showLoyaltySection,
+                                onCheckedChange = { 
+                                    viewModel.showLoyaltySection = it 
+                                    viewModel.addActivityLog("مزامنة ظهور مربع نقاط الولاء: $it")
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = viewModel.appPrimaryColor)
+                            )
+                        }
+
+                        if (viewModel.showLoyaltySection) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextField(
+                                value = viewModel.loyaltyCardTitle,
+                                onValueChange = { viewModel.loyaltyCardTitle = it },
+                                label = { Text("عنوان صندوق الولاء (استخدم %d للإشارة للرصيد)", fontSize = 10.sp) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = TextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color.Black,
+                                    unfocusedContainerColor = Color.Black
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+                            TextField(
+                                value = viewModel.loyaltyCardText,
+                                onValueChange = { viewModel.loyaltyCardText = it },
+                                label = { Text("نص عرض الاستبدال والمكافأة الترويجي", fontSize = 10.sp) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = TextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color.Black,
+                                    unfocusedContainerColor = Color.Black
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("حجم خط صندوق الولاء: ${viewModel.loyaltyCardProgressSize.toInt()} sp", color = Color.LightGray, fontSize = 11.sp)
+                                Slider(
+                                    value = viewModel.loyaltyCardProgressSize,
+                                    onValueChange = { viewModel.loyaltyCardProgressSize = it },
+                                    valueRange = 10f..22f,
+                                    modifier = Modifier.width(160.dp),
+                                    colors = SliderDefaults.colors(viewModel.appPrimaryColor, activeTrackColor = viewModel.appPrimaryColor)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("حواف ومسافات الصندوق (Padding): ${viewModel.loyaltyCardHeightPadding.toInt()} dp", color = Color.LightGray, fontSize = 11.sp)
+                                Slider(
+                                    value = viewModel.loyaltyCardHeightPadding,
+                                    onValueChange = { viewModel.loyaltyCardHeightPadding = it },
+                                    valueRange = 6f..30f,
+                                    modifier = Modifier.width(160.dp),
+                                    colors = SliderDefaults.colors(viewModel.appPrimaryColor, activeTrackColor = viewModel.appPrimaryColor)
+                                )
+                            }
                         }
                     }
                 }
@@ -1617,7 +1876,7 @@ fun AdminChatRoomsSupervisorTab(viewModel: AppViewModel, context: android.conten
                                 val isUserReply = m.senderRole == "user"
                                 Box(
                                     modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = if (isUserReply) Alignment.CenterLeft else Alignment.CenterRight
+                                    contentAlignment = if (isUserReply) Alignment.CenterStart else Alignment.CenterEnd
                                 ) {
                                     Card(
                                         shape = RoundedCornerShape(8.dp),

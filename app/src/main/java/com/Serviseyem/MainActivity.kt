@@ -19,7 +19,10 @@ class MainActivity : ComponentActivity() {
             val appViewModel: AppViewModel = viewModel()
             val navController = rememberNavController()
 
-            ServisEmTheme(primaryColor = appViewModel.appPrimaryColor) {
+            ServisEmTheme(
+                primaryColor = appViewModel.appPrimaryColor,
+                fontFamily = appViewModel.appFontFamily
+            ) {
                 NavHost(
                     navController = navController,
                     startDestination = "main_dashboard"

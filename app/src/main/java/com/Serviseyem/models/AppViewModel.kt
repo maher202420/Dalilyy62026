@@ -5,11 +5,67 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class AppViewModel : ViewModel() {
+
+    // --- Firebase Firestore real-time listener simulation ---
+    private val _footerUpdateFlow = MutableSharedFlow<Pair<String, Float>>(replay = 1)
+    val footerUpdateFlow = _footerUpdateFlow.asSharedFlow()
+
+    // Realtime variables synced from Firestore
+    var footerText by mutableStateOf("wam2026")
+    var footerFontSize by mutableStateOf(11f)
+
+    // Footer update function simulating Firestore write
+    fun updateFooterTextFromFirestore(text: String, size: Float) {
+        viewModelScope.launch {
+            _footerUpdateFlow.emit(Pair(text, size))
+            addActivityLog("نظام Firestore: تم تحديث نص التسييل إلى '$text' وحجم الخط إلى $size")
+        }
+    }
+
+    // Dynamic Fonts
+    var appSelectedFontName by mutableStateOf("Default")
+    val appFontFamily: androidx.compose.ui.text.font.FontFamily
+        get() = when (appSelectedFontName) {
+            "Monospace" -> androidx.compose.ui.text.font.FontFamily.Monospace
+            "Serif" -> androidx.compose.ui.text.font.FontFamily.Serif
+            "SansSerif" -> androidx.compose.ui.text.font.FontFamily.SansSerif
+            "Cursive" -> androidx.compose.ui.text.font.FontFamily.Cursive
+            else -> androidx.compose.ui.text.font.FontFamily.Default
+        }
+
+    // About App dynamic variables
+    var appDownloadLink by mutableStateOf("https://yemservices.page.link/download")
+    var appInfoUploadedImagePath by mutableStateOf<String?>("https://cdn-icons-png.flaticon.com/512/2983/2983067.png")
+    var appInfoImageEmoji by mutableStateOf("📱")
+
+    // Loyalty Points Configuration (Controlled by Admin, Hidden from main screen by default)
+    var showLoyaltySection by mutableStateOf(false)
+    var loyaltyCardText by mutableStateOf("استبدل خصم 100 نقطة فوري لتقليل كلفة الزيارات بمقدار 5000 ريال يمني!")
+    var loyaltyCardTitle by mutableStateOf("🎁 رصيد نقاط الولاء الخاصة بك بالدليل الحالي: %d نقطة")
+    var loyaltyCardProgressSize by mutableStateOf(13f)
+    var loyaltyCardHeightPadding by mutableStateOf(14f)
+
+    init {
+        // Run simulated Firestore Snapshot Listener
+        viewModelScope.launch {
+            _footerUpdateFlow.collect { (text, size) ->
+                footerText = text
+                footerFontSize = size
+                addActivityLog("مستمع Firestore فوري: تم مزامنة تغييرات التذييل '$text' بنجاح لجميع أجهزة المستخدمين!")
+            }
+        }
+        // Emit typical initial values
+        updateFooterTextFromFirestore("wam2026", 11f)
+    }
 
     // Central dynamic Lists
     var providers by mutableStateOf(listOf(
@@ -21,10 +77,13 @@ class AppViewModel : ViewModel() {
     ))
 
     var categories by mutableStateOf(listOf(
-        Category(nameAr = "سباكة", nameEn = "Plumbing", description = "صيانة الحمامات وتمديد الشبكات والمطابخ", iconEmoji = "🔧", isPinned = true),
-        Category(nameAr = "كهرباء", nameEn = "Electrical", description = "صيانة وتمديد خطوط الكهرباء وفحص المولدات", iconEmoji = "⚡", isPinned = true),
+        Category(nameAr = "صيانة", nameEn = "Maintenance", description = "أعمال السباكة والكهرباء والحدادة وتكييف وتبريد المنازل", iconEmoji = "🛠️", isPinned = true),
+        Category(nameAr = "طبية", nameEn = "Medical", description = "التمريض منزلي، الرعاية الصحية والاستشارات المستعجلة", iconEmoji = "🩺", isPinned = true),
+        Category(nameAr = "قانونية", nameEn = "Legal", description = "استشارات وصياغة عقود وقضايا إدارية وعمالية", iconEmoji = "⚖️", isPinned = true),
+        Category(nameAr = "سباكة", nameEn = "Plumbing", description = "صيانة الحمامات وتمديد الشبكات والمطابخ", iconEmoji = "🔧", isPinned = false),
+        Category(nameAr = "كهرباء", nameEn = "Electrical", description = "صيانة وتمديد خطوط الكهرباء وفحص المولدات", iconEmoji = "⚡", isPinned = false),
         Category(nameAr = "نجارة", nameEn = "Carpentry", description = "تصليح الأبواب والمطابخ وتصميم غرف النوم", iconEmoji = "🪚", isPinned = false),
-        Category(nameAr = "تبريد وتكييف", nameEn = "Cooling", description = "تعبئة الفريون وغسيل المكيفات المركزية", iconEmoji = "❄️", isPinned = true),
+        Category(nameAr = "تبريد وتكييف", nameEn = "Cooling", description = "تعبئة الفريون وغسيل المكيفات المركزية", iconEmoji = "❄️", isPinned = false),
         Category(nameAr = "حدادة", nameEn = "Smithing", description = "تركيب البوابات الحديدية والدرابزين والحماية", iconEmoji = "🔨", isPinned = false)
     ))
 
