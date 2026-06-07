@@ -37,7 +37,29 @@ fun AdminScreen(
 
     // Backdoor secret pass gate
     var isOwnerPassed by remember { mutableStateOf(false) }
+    var loginTabSelected by remember { mutableStateOf(0) } // 0 = Admin Login, 1 = Owner Backdoor
+    
+    // Inputs
+    var adminUsernameInput by remember { mutableStateOf("") }
+    var adminPasswordInput by remember { mutableStateOf("") }
     var ownerPasswordInput by remember { mutableStateOf("") }
+    
+    var rememberMeState by remember(loginTabSelected) { 
+        mutableStateOf(if (loginTabSelected == 0) viewModel.rememberMeNormal else viewModel.rememberMeBackdoor) 
+    }
+
+    // Auto-login effect
+    LaunchedEffect(Unit) {
+        if (viewModel.rememberMeBackdoor) {
+            isOwnerPassed = true
+            viewModel.activeAdminUsername = "المالك العام السرّي"
+            viewModel.addActivityLog("دخول تلقائي معتمد للمسؤول السري للرئيسية")
+        } else if (viewModel.rememberMeNormal) {
+            isOwnerPassed = true
+            viewModel.activeAdminUsername = viewModel.adminUsernameSecret
+            viewModel.addActivityLog("دخول تلقائي معتمد للمشرف الرئيسي")
+        }
+    }
 
     if (!isOwnerPassed) {
         // Double Premium Backdoor password challenge box
@@ -51,50 +73,159 @@ fun AdminScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF15171B)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF13151A)),
                 border = BorderStroke(1.dp, viewModel.appPrimaryColor)
             ) {
                 Column(
                     modifier = Modifier.padding(22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("🔒 بوابة المالك والمسؤول المعياري", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("الرجاء إدخال رقم المرور السري السري للتوثيق والتحكم:", color = Color.Gray, fontSize = 11.sp, textAlign = TextAlign.Center)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    TextField(
-                        value = ownerPasswordInput,
-                        onValueChange = { ownerPasswordInput = it },
-                        placeholder = { Text("أدخل رمز الدخول (مثال: 7777)", color = Color.Gray, fontSize = 12.sp) },
-                        modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedContainerColor = Color.Black,
-                            unfocusedContainerColor = Color.Black
-                        )
+                    Text(
+                        text = viewModel.appNameAr,
+                        color = viewModel.appPrimaryColor,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = viewModel.appFontFamily
                     )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("🔐 بوابة تسجيل الدخول الإداري المعيارية السحابية", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = viewModel.appFontFamily)
+                    Spacer(modifier = Modifier.height(14.dp))
+                    
+                    // Tab selector
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF07080A), RoundedCornerShape(8.dp))
+                            .padding(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(34.dp)
+                                .background(if (loginTabSelected == 0) viewModel.appPrimaryColor else Color.Transparent, RoundedCornerShape(6.dp))
+                                .clickable { loginTabSelected = 0 }
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("دخول المشرف", color = if (loginTabSelected == 0) Color.Black else Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(34.dp)
+                                .background(if (loginTabSelected == 1) viewModel.appPrimaryColor else Color.Transparent, RoundedCornerShape(6.dp))
+                                .clickable { loginTabSelected = 1 }
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("بوابة المالك السرّية", color = if (loginTabSelected == 1) Color.Black else Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    if (loginTabSelected == 0) {
+                        // Admin Login Username & Password Option
+                        TextField(
+                            value = adminUsernameInput,
+                            onValueChange = { adminUsernameInput = it },
+                            placeholder = { Text("اسم المستخدم (مثال: WAM2026)", color = Color.DarkGray, fontSize = 11.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Black,
+                                unfocusedContainerColor = Color.Black
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        TextField(
+                            value = adminPasswordInput,
+                            onValueChange = { adminPasswordInput = it },
+                            placeholder = { Text("كلمة المرور المشفرة للمشرف", color = Color.DarkGray, fontSize = 11.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Black,
+                                unfocusedContainerColor = Color.Black
+                            )
+                        )
+                    } else {
+                        // Owner Backdoor Option
+                        TextField(
+                            value = ownerPasswordInput,
+                            onValueChange = { ownerPasswordInput = it },
+                            placeholder = { Text("أدخل رمز المالك السري لدخول الباقة الخلفية مباشرة", color = Color.DarkGray, fontSize = 11.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Black,
+                                unfocusedContainerColor = Color.Black
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Remember Me Checkbox
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Checkbox(
+                            checked = rememberMeState,
+                            onCheckedChange = { rememberMeState = it },
+                            colors = CheckboxDefaults.colors(checkedColor = viewModel.appPrimaryColor)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = "تذكرني بحفظ حالة تسجيل الدخول على هذا الجهاز",
+                            color = Color.LightGray,
+                            fontSize = 10.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    
                     Button(
                         onClick = {
-                            val activeAdminMatch = viewModel.admins.find { it.passwordSecret == ownerPasswordInput }
-                            if (activeAdminMatch != null || ownerPasswordInput == "7777") {
-                                isOwnerPassed = true
-                                viewModel.activeAdminUsername = activeAdminMatch?.username ?: "المالك العام"
-                                viewModel.addActivityLog("تسجيل دخول المشرف العام: ${viewModel.activeAdminUsername}")
-                                Toast.makeText(context, "🔑 أهلاً بك يا ${viewModel.activeAdminUsername}! تم فتح صلاحيات الدليل بأمان.", Toast.LENGTH_SHORT).show()
+                            if (loginTabSelected == 0) {
+                                // Admin match
+                                if (adminUsernameInput == viewModel.adminUsernameSecret && adminPasswordInput == viewModel.adminPasswordSecret) {
+                                    isOwnerPassed = true
+                                    viewModel.rememberMeNormal = rememberMeState
+                                    viewModel.activeAdminUsername = viewModel.adminUsernameSecret
+                                    viewModel.addActivityLog("تسجيل دخول مشرف معتمد ومصادق عليه: $adminUsernameInput")
+                                    Toast.makeText(context, "🔓 مرحباً بالمشرف العام! تم مزامنة الصلاحيات واللوحة فورا.", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "❌ اسم المشرف أو كلمة المرور غير مطابقة!", Toast.LENGTH_LONG).show()
+                                }
                             } else {
-                                Toast.makeText(context, "❌ الرمز السري خاطئ! يرجى إعادة التحقق محلياً.", Toast.LENGTH_LONG).show()
+                                // Owner backdoor passcode match
+                                if (ownerPasswordInput == viewModel.ownerPasswordSecret) {
+                                    isOwnerPassed = true
+                                    viewModel.rememberMeBackdoor = rememberMeState
+                                    viewModel.activeAdminUsername = "المالك العام السرّي"
+                                    viewModel.addActivityLog("دخول آمن وموثق للمالك الخلفي عبر شفرة المرور.")
+                                    Toast.makeText(context, "👑 أهلاً ومرحباً بالقائد والمالك العام للمنصة السحابية!", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "❌ الرمز السري للمالك العام خاطئ!", Toast.LENGTH_LONG).show()
+                                }
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("توثيق الدخول الفوري", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text("توثيق ومزامنة الدخول الفوري", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp, fontFamily = viewModel.appFontFamily)
                     }
+                    
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = onNavigateBack) {
                         Text("العودة للتطبيق العام المباشر", color = Color.White)
@@ -1022,7 +1153,7 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
         item {
             AdminSectionHeader(
                 id = 10,
-                title = "١٠. تخصيص المظهر والثيم وشروط الكادر الإقليمي",
+                title = "١٠. تخصيص المظهر والثيم والمالك وشروط الكادر",
                 badgeValue = null,
                 expandedSection = expandedSection,
                 onHeaderClick = { expandedSection = 10 },
@@ -1442,7 +1573,7 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                             val logoPresets = listOf(
                                 "📱" to "جوال",
                                 "🛠️" to "صيانة",
-                                "🇾🇪" to "اليمن",
+                                "`🇾🇪`" to "اليمن",
                                 "🌟" to "مميز"
                             )
                             logoPresets.forEach { item ->
@@ -1565,6 +1696,187 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                                     modifier = Modifier.width(160.dp),
                                     colors = SliderDefaults.colors(viewModel.appPrimaryColor, activeTrackColor = viewModel.appPrimaryColor)
                                 )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Divider(color = Color.DarkGray)
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // NEW PART I: Owner Exclusive Backdoor Branding Controls
+                        Text("👑 ط. تحكم وهوية المالك العامة وقاعدة البيانات العليا:", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // App Name Editing
+                        TextField(
+                            value = viewModel.appNameAr,
+                            onValueChange = { viewModel.appNameAr = it },
+                            label = { Text("اسم التطبيق المعتمد (بالعربية)", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TextField(
+                            value = viewModel.appNameEn,
+                            onValueChange = { viewModel.appNameEn = it },
+                            label = { Text("اسم التطبيق المعتمد (بالأجنبية)", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Logo choosing emoji
+                        TextField(
+                            value = viewModel.appLogoEmoji,
+                            onValueChange = { viewModel.appLogoEmoji = it },
+                            label = { Text("أيقونة/علم راية التطبيق التعبيرية بالرئيسية", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Owner passcode and Admin password
+                        TextField(
+                            value = viewModel.ownerPasswordSecret,
+                            onValueChange = { viewModel.ownerPasswordSecret = it },
+                            label = { Text("رمز المرور السري للمالك العام (Backdoor Passcode)", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            visualTransformation = PasswordVisualTransformation(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TextField(
+                            value = viewModel.adminUsernameSecret,
+                            onValueChange = { viewModel.adminUsernameSecret = it },
+                            label = { Text("اسم مستخدم المشرف الرئيسي المعياري", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TextField(
+                            value = viewModel.adminPasswordSecret,
+                            onValueChange = { viewModel.adminPasswordSecret = it },
+                            label = { Text("رقم مرور المشرف المعياري الجديد (WAM2026 Pass)", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            visualTransformation = PasswordVisualTransformation(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Greeting message
+                        TextField(
+                            value = viewModel.appGreetingMessageAr,
+                            onValueChange = { viewModel.appGreetingMessageAr = it },
+                            label = { Text("الرسالة الترحيبية المتحركة بالرئيسية (عربي)", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Support fields contacts
+                        Text("قنوات الدعم الفني والتواصل المباشر (عن التطبيق):", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        TextField(
+                            value = viewModel.supportPhone,
+                            onValueChange = { viewModel.supportPhone = it },
+                            label = { Text("رقم هاتف الاتصال للدعم الفني", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TextField(
+                            value = viewModel.supportEmail,
+                            onValueChange = { viewModel.supportEmail = it },
+                            label = { Text("البريد الإلكتروني المعتمد للدعم", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TextField(
+                            value = viewModel.supportWhatsapp,
+                            onValueChange = { viewModel.supportWhatsapp = it },
+                            label = { Text("رابط/رقم واتساب المباشر للشكاوى", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.Black, unfocusedContainerColor = Color.Black)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Footer visibility
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("إبراز تذييل الصفحة الترويجي بأسفل جميع شاشات العملاء:", color = Color.White, fontSize = 11.sp)
+                            Switch(
+                                checked = viewModel.isFooterVisible,
+                                onCheckedChange = { viewModel.isFooterVisible = it },
+                                colors = SwitchDefaults.colors(checkedThumbColor = viewModel.appPrimaryColor)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Divider(color = Color.DarkGray)
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Reordering top bar icons
+                        Text("⇅ ترتيب وتخصيص أزرار الشريط العلوي العام (Top App Bar):", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("اضغط على الأسهم لجمع وترتيب توزيعة الأزرار الجغرافية العلوية حسب الرغبة:", color = Color.Gray, fontSize = 10.sp)
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        viewModel.topBarIcons.forEachIndexed { index, iconId ->
+                            val readableName = when (iconId) {
+                                "home" -> "الرئيسية 🏠"
+                                "login" -> "تسجيل الدخول الإداري 🔐"
+                                "register" -> "تسجيل فني جديد 👤"
+                                "language" -> "مبدل اللغة 🌐"
+                                "refresh" -> "مزامنة السناب شوت 🔄"
+                                else -> iconId
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .background(Color(0xFF1B1D24), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(readableName, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Row {
+                                    IconButton(
+                                        onClick = {
+                                            if (index > 0) {
+                                                val mList = viewModel.topBarIcons.toMutableList()
+                                                val temp = mList[index]
+                                                mList[index] = mList[index - 1]
+                                                mList[index - 1] = temp
+                                                viewModel.topBarIcons = mList
+                                                viewModel.addActivityLog("إعادة ترتيب أزرار الشريط العلوي: تم نقل $readableName لأعلى")
+                                            }
+                                        },
+                                        enabled = index > 0
+                                    ) {
+                                        Icon(Icons.Default.ArrowUpward, contentDescription = "Up", tint = if (index > 0) viewModel.appPrimaryColor else Color.DarkGray, modifier = Modifier.size(18.dp))
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            if (index < viewModel.topBarIcons.size - 1) {
+                                                val mList = viewModel.topBarIcons.toMutableList()
+                                                val temp = mList[index]
+                                                mList[index] = mList[index + 1]
+                                                mList[index + 1] = temp
+                                                viewModel.topBarIcons = mList
+                                                viewModel.addActivityLog("إعادة ترتيب أزرار الشريط العلوي: تم نقل $readableName لأسفل")
+                                            }
+                                        },
+                                        enabled = index < viewModel.topBarIcons.size - 1
+                                    ) {
+                                        Icon(Icons.Default.ArrowDownward, contentDescription = "Down", tint = if (index < viewModel.topBarIcons.size - 1) viewModel.appPrimaryColor else Color.DarkGray, modifier = Modifier.size(18.dp))
+                                    }
+                                }
                             }
                         }
                     }

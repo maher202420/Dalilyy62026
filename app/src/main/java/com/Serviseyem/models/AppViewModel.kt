@@ -22,6 +22,30 @@ class AppViewModel : ViewModel() {
     // Realtime variables synced from Firestore
     var footerText by mutableStateOf("wam2026")
     var footerFontSize by mutableStateOf(11f)
+    var isFooterVisible by mutableStateOf(true)
+
+    // Security & Identity Credentials (customizable & synced)
+    var ownerPasswordSecret by mutableStateOf("maher--736462")
+    var adminUsernameSecret by mutableStateOf("WAM2026")
+    var adminPasswordSecret by mutableStateOf("maher736462")
+    
+    var appNameAr by mutableStateOf("دليل خدمات اليمن")
+    var appNameEn by mutableStateOf("Yemen Services Dir")
+    var appLogoEmoji by mutableStateOf("🇾🇪")
+    
+    var appGreetingMessageAr by mutableStateOf("أهلاً ومرحباً بكم مع تطبيق دليل كل خدمات اليمن - الرفيق الموثوق للأعمال المهنية وصيانة المنازل بدقة معيارية لحظية متميزة")
+    var appGreetingMessageEn by mutableStateOf("Welcome to Yemen Services Directory - Your trusted companion for professional business and home maintenance with real-time accuracy!")
+
+    var supportPhone by mutableStateOf("777644670")
+    var supportEmail by mutableStateOf("support@serviseyem.com")
+    var supportWhatsapp by mutableStateOf("967777644670")
+
+    var rememberMeNormal by mutableStateOf(false)
+    var rememberMeBackdoor by mutableStateOf(false)
+    var isArabic by mutableStateOf(true)
+
+    // Top Bar customizable order items: "home", "login", "register", "language", "refresh"
+    var topBarIcons by mutableStateOf(listOf("home", "login", "register", "language", "refresh"))
 
     // Footer update function simulating Firestore write
     fun updateFooterTextFromFirestore(text: String, size: Float) {

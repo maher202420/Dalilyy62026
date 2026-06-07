@@ -18,7 +18,11 @@ data class ServiceProvider(
     var longitude: Double? = 44.206,
     var isMale: Boolean = true,
     var status: String = "مقبول", // "معلق" / "مقبول" / "مرفوض"
-    var biography: String = "أخصائي معتمد ذو خبرة عالية في الدقة والتشخيص المعياري."
+    var biography: String = "أخصائي معتمد ذو خبرة عالية في الدقة والتشخيص المعياري.",
+    var rejectionReason: String? = null,
+    var subscriptionType: String? = "شهري معتمد",
+    var isSubscriptionVerified: Boolean = false,
+    var isPinned: Boolean = false
 )
 
 data class Category(
