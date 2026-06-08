@@ -70,6 +70,11 @@ class AppViewModel : ViewModel() {
     var appDownloadLink by mutableStateOf("https://yemservices.page.link/download")
     var appInfoUploadedImagePath by mutableStateOf<String?>("https://cdn-icons-png.flaticon.com/512/2983/2983067.png")
     var appInfoImageEmoji by mutableStateOf("📱")
+    var aboutAppTitle by mutableStateOf("الدليل الوطني لربط المهنيين بالعملاء 🇾🇪")
+    var aboutAppDescription by mutableStateOf("تطبيق صمم بتقاطعات هندسية عالية لتمكين البحث السريع، والمحادثات المباشرة الفورية والدقيقة.")
+    var aboutAppVersion by mutableStateOf("V2.6.2026")
+    var aboutAppUsersStat by mutableStateOf("7,820")
+    var aboutAppProvidersStat by mutableStateOf("1,240")
 
     // Loyalty Points Configuration (Controlled by Admin, Hidden from main screen by default)
     var showLoyaltySection by mutableStateOf(false)

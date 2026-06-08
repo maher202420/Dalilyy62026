@@ -1,27 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Golden platform base -->
-    <path
-        android:fillColor="#FFD700"
-        android:pathData="M34,74 C34,74 44,79 54,79 C64,79 74,74 74,74 C74,74 64,84 54,84 C44,84 34,74 34,74 Z" />
-    <!-- Wrench Tool -->
-    <path
-        android:fillColor="#FFD700"
-        android:pathData="M24,34 L32,42 L28,46 L20,38 Z" />
-    <!-- Lightbulb - Innovation tool -->
-    <path
-        android:fillColor="#FFD700"
-        android:pathData="M54,20 Q48,20 48,26 Q48,32 52,35 L52,38 L56,38 L56,35 Q60,32 60,26 Q60,20 54,20 Z" />
-    <!-- Hammer -->
-    <path
-        android:fillColor="#FFD700"
-        android:pathData="M76,34 L84,42 L80,46 L72,38 Z" />
-    <!-- Hand receiving the tools -->
-    <path
-        android:fillColor="#FFD700"
-        android:pathData="M30,56 C35,53 45,53 54,58 C62,62 70,62 78,56 C74,66 60,70 54,70 C48,70 34,66 30,56 Z" />
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="66dp"
+        android:height="66dp"
+        android:drawable="@drawable/app_logo_1780930980146"
+        android:gravity="center" />
+</layer-list>

@@ -77,6 +77,20 @@ fun MainScreen(
     var secretHeaderFlagTapCount by remember { mutableIntStateOf(0) }
     var secretFooterVersionTapCount by remember { mutableIntStateOf(0) }
 
+    // AI Intelligent Assistant state variables (Gemini compatible offline fallback)
+    var showAiAssistantDialog by remember { mutableStateOf(false) }
+    var aiAssistantMessages by remember {
+        mutableStateOf(listOf(
+            ChatMessage(
+                chatId = "ai",
+                senderName = "مساعد دليلي الذكي 🤖",
+                senderRole = "admin",
+                messageText = "مرحباً بك! أنا مستشارك الذكي اليمني في منصة دليلي الفاخرة للخدمات. اسألني عن الفنيين، كلفة المعاينة والتشخيص، أو كيفية التسجيل والانضمام بقائمة المهن وسأجيبك فوراً بدقة واحترافية وبشكل كامل دون إنترنت!"
+            )
+        ))
+    }
+    var newAiAssistantInputText by remember { mutableStateOf("") }
+
     // Match filtering on active providers
     val activeAndApprovedProviders = remember(viewModel.providers, searchQuery, selectedCategoryFilter, selectedCityFilter, userSearchRadiusLimit) {
         viewModel.providers.filter { p ->
@@ -1024,6 +1038,31 @@ fun MainScreen(
                     }
                 }
             }
+
+            // 11. AI Smart Assistant Floating Bubble (Gemini compatible offline fallback)
+            if (viewModel.aiAssistantVisible) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(viewModel.aiAssistantIconSize.dp)
+                            .background(viewModel.aiAssistantIconColor, CircleShape)
+                            .clickable {
+                                showAiAssistantDialog = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "🤖",
+                            fontSize = (viewModel.aiAssistantIconSize / 2.2f).sp,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -1265,12 +1304,12 @@ fun MainScreen(
             onDismissRequest = { showAboutAppDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("ℹ️ عن دليل خدمات اليمن", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = viewModel.appFontFamily)
+                    Text("ℹ️ عن ${viewModel.appNameAr}", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = viewModel.appFontFamily)
                 }
             },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Logo Image or Emoji display
@@ -1296,22 +1335,76 @@ fun MainScreen(
                     
                     Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "الدليل الوطني لربط المهنيين بالعملاء 🇾🇪",
+                        text = viewModel.aboutAppTitle,
                         color = viewModel.appPrimaryColor,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         fontFamily = viewModel.appFontFamily
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "تطبيق صمم بتقاطعات هندسية عالية لتمكين البحث السريع، والمحادثات المباشرة الفورية والدقيقة.",
+                        text = viewModel.aboutAppDescription,
                         color = Color.LightGray,
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center,
                         fontFamily = viewModel.appFontFamily
                     )
-                    Spacer(modifier = Modifier.height(14.dp))
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Stats section
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2533))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("عدد المشتركين 👥", color = Color.Gray, fontSize = 9.sp, fontFamily = viewModel.appFontFamily)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(viewModel.aboutAppUsersStat, color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2533))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("الفنيين المعتمدين 🏅", color = Color.Gray, fontSize = 9.sp, fontFamily = viewModel.appFontFamily)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(viewModel.aboutAppProvidersStat, color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(10.dp))
+                    
+                    // Support Contacts
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2533))
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text("📞 رقم الدعم: ${viewModel.supportPhone}", color = Color.White, fontSize = 10.sp, fontFamily = viewModel.appFontFamily)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("✉️ البريد الإلكتروني: ${viewModel.supportEmail}", color = Color.White, fontSize = 10.sp, fontFamily = viewModel.appFontFamily)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("💬 واتساب الدعم: ${viewModel.supportWhatsapp}", color = Color.White, fontSize = 10.sp, fontFamily = viewModel.appFontFamily)
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("إصدار التطبيق: ${viewModel.aboutAppVersion}", color = Color.Gray, fontSize = 9.sp, fontFamily = viewModel.appFontFamily)
+                    Spacer(modifier = Modifier.height(10.dp))
                     
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -1355,6 +1448,197 @@ fun MainScreen(
                 }
             },
             containerColor = Color(0xFF111E2E)
+        )
+    }
+
+    // --- DIALOG POPUP: AI SMART ASSISTANT CONVERSATION ROOM ---
+    if (showAiAssistantDialog) {
+        AlertDialog(
+            onDismissRequest = { showAiAssistantDialog = false },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🤖", fontSize = 24.sp, modifier = Modifier.padding(end = 6.dp))
+                    Column {
+                        Text(
+                            text = "مساعد دليلي الذكي (Gemini)",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = viewModel.appFontFamily
+                        )
+                        Text(
+                            text = "متاح للعمل دون اتصال بالإنترنت ⚡",
+                            color = viewModel.appPrimaryColor,
+                            fontSize = 9.sp,
+                            fontFamily = viewModel.appFontFamily
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp)
+                            .background(Color.Black, RoundedCornerShape(8.dp))
+                            .border(1.dp, Color(0xFF2E2E2E), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(aiAssistantMessages) { msg ->
+                                val isMe = msg.senderRole == "user"
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = if (isMe) Alignment.CenterStart else Alignment.CenterEnd
+                                ) {
+                                    Card(
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isMe) viewModel.appPrimaryColor else Color(0xFF1E293B)
+                                        ),
+                                        border = BorderStroke(
+                                            width = 1.dp,
+                                            color = if (isMe) viewModel.appPrimaryColor else Color(0xFF334155)
+                                        )
+                                    ) {
+                                        Column(modifier = Modifier.padding(8.dp)) {
+                                            Text(
+                                                text = if (isMe) "أنت (مستعلم)" else msg.senderName,
+                                                color = if (isMe) Color.Black else viewModel.appPrimaryColor,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                fontFamily = viewModel.appFontFamily
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = msg.messageText,
+                                                color = if (isMe) Color.Black else Color.White,
+                                                fontSize = 11.sp,
+                                                fontFamily = viewModel.appFontFamily
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextField(
+                            value = newAiAssistantInputText,
+                            onValueChange = { newAiAssistantInputText = it },
+                            placeholder = {
+                                Text(
+                                    text = "اسأل عن فني، مدينة، أسعار فحص...",
+                                    color = Color.LightGray,
+                                    fontSize = 11.sp,
+                                    fontFamily = viewModel.appFontFamily
+                                )
+                            },
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontFamily = viewModel.appFontFamily
+                            ),
+                            modifier = Modifier.weight(1f),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color(0xFF1A2235),
+                                unfocusedContainerColor = Color(0xFF1A2235),
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .background(viewModel.appPrimaryColor, RoundedCornerShape(8.dp))
+                                .clickable {
+                                    if (newAiAssistantInputText.isNotEmpty()) {
+                                        val userQuery = newAiAssistantInputText
+                                        val userMsg = ChatMessage(
+                                            chatId = "ai",
+                                            senderName = "العميل",
+                                            senderRole = "user",
+                                            messageText = userQuery
+                                        )
+                                        aiAssistantMessages = aiAssistantMessages + userMsg
+                                        newAiAssistantInputText = ""
+
+                                        coroutineScope.launch {
+                                            delay(1000)
+                                            val queryNormalized = userQuery.lowercase()
+                                            val replyText = when {
+                                                queryNormalized.contains("سباك") || queryNormalized.contains("سباكة") -> {
+                                                    "المستشار الذكي: ممتاز! لدينا نخبة من السباكين كأعمال السباكة المنزلية الفاخرة مثل الأخصائي 'أبو ماجد البريحي' في إب، وقيمة معاينته 4000 ريال يمني ومتاح للاتصال اللحظي."
+                                                }
+                                                queryNormalized.contains("صنعاء") -> {
+                                                    "المستشار الذكي: نعم، في العاصمة صنعاء لدينا فنيون متميزون في عدة مجالات، فمثلاً 'المهندس وليد الصنعاني' هو عميد فنيي التبريد والتكييف، وهناك حدادون مهرة لمعالجة كافة الطلبات."
+                                                }
+                                                queryNormalized.contains("تكييف") || queryNormalized.contains("تبريد") || queryNormalized.contains("مكيف") -> {
+                                                    "المستشار الذكي: للتكيف والبرودة، لدينا 'المهندس وليد الصنعاني' في صنعاء، عميد التبريد المركزي وخبير الفريون والغسيل لمعاينة دقيقة تبلغ 5000 ريال يمني."
+                                                }
+                                                queryNormalized.contains("كهربا") || queryNormalized.contains("طاقة") -> {
+                                                    "المستشار الذكي: للكهرباء والطاقة الشمسية، الفني الموصى به بشدة هو 'أحمد جلال الحديدي' بمدينة الحديدة، ويمتاز بالتمديدات الآمنة وصيانة المولدات بكلفة معاينة 3500 ريال يمني فقط."
+                                                }
+                                                queryNormalized.contains("أسعار") || queryNormalized.contains("سعر") || queryNormalized.contains("كلفة") || queryNormalized.contains("فلوس") -> {
+                                                    "المستشار الذكي: يسير دليلنا على هيكل أسعار معياري عادل بالريال اليمني. تتراوح رسوم المعاينة في المنزل بين 3500 و 6000 ريال حسب التخصص، ويتم التفاهم على أجر الإصلاح الإجمالي بوضوح."
+                                                }
+                                                queryNormalized.contains("تسجيل") || queryNormalized.contains("انضمام") || queryNormalized.contains("كيف") -> {
+                                                    "المستشار الذكي: للانضمام كمهني معتمد، ادخل لوحة المالك واقرأ شروطه ثم أرسل صورتك والضمانات الفنية عبر نافذة التسجيل المتكاملة ليوافق عليها المشرف."
+                                                }
+                                                queryNormalized.contains("نقاط") || queryNormalized.contains("ولاء") -> {
+                                                    "المستشار الذكي: يمكنك كسب نقاط الولاء بتقييم الفنيين بعد إنجاز العمل (+15 نقطة)، وعند بلوغ 100 نقطة تستبدلها بخصم بقيمة 5000 ريال يمني!"
+                                                }
+                                                else -> {
+                                                    "المستشار الذكي: تساؤلك محط اهتمامي البالغ في دليلي الفني لخدمات اليمن. يتوفر لدينا سباكون، كهربائيون، نجارون، أخصائيو تبريد وحدادون بكافة المحافظات مجاناً وتواصل مباشر باتصال أو واتساب بنقرة واحدة!"
+                                                }
+                                            }
+                                            val aiMsg = ChatMessage(
+                                                chatId = "ai",
+                                                senderName = "مساعد دليلي الذكي 🤖",
+                                                senderRole = "admin",
+                                                messageText = replyText
+                                            )
+                                            aiAssistantMessages = aiAssistantMessages + aiMsg
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Send,
+                                contentDescription = "ارسل المساعد",
+                                tint = Color.Black,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAiAssistantDialog = false }) {
+                    Text("إغلاق المحادثة", color = Color.White, fontFamily = viewModel.appFontFamily)
+                }
+            },
+            containerColor = Color(0xFF141A28)
         )
     }
 }

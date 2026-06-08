@@ -354,8 +354,12 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
         "#FFD700" to "الذهبي الفاخر",
         "#1D4ED8" to "الأزرق الملكي",
         "#DC2626" to "الأحمر القاني",
-        "#16A34A" to "الأخضر الماسي"
+        "#10B981" to "الزمردي الراقي",
+        "#8B5CF6" to "البنفسجي المميز",
+        "#06B6D4" to "السماوي الأنيق"
     )
+
+    var customHexColorValue by remember { mutableStateOf("#") }
 
     // Security feedback modal state
     var showDeleteConfirmModal by remember { mutableStateOf(false) }
@@ -1170,11 +1174,14 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                         // Theme dynamic accent picker
                         Text("أ. التحكم بألوان التطبيق والخطوط المعيارية:", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(6.dp))
+                        
+                        // First 3 colors
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            colorPalettes.forEach { item ->
-                                val isSelected = viewModel.appPrimaryColorStr == item.first
+                            colorPalettes.take(3).forEach { item ->
+                                val isSelected = viewModel.appPrimaryColorStr.uppercase() == item.first.uppercase()
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
@@ -1188,6 +1195,7 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                                         .clickable {
                                             viewModel.appPrimaryColorStr = item.first
                                             viewModel.addActivityLog("تم تحويل لغة مظهر التطبيق إلى: ${item.second}")
+                                            Toast.makeText(context, "🎨 تم تطبيق اللون وبناء طابع الهوية الموحد: ${item.second}", Toast.LENGTH_SHORT).show()
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -1198,6 +1206,109 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Second 3 colors (distinct themes)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            colorPalettes.drop(3).forEach { item ->
+                                val isSelected = viewModel.appPrimaryColorStr.uppercase() == item.first.uppercase()
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(34.dp)
+                                        .background(Color(android.graphics.Color.parseColor(item.first)), RoundedCornerShape(6.dp))
+                                        .border(
+                                            2.dp,
+                                            if (isSelected) Color.White else Color.Transparent,
+                                            RoundedCornerShape(6.dp)
+                                        )
+                                        .clickable {
+                                            viewModel.appPrimaryColorStr = item.first
+                                            viewModel.addActivityLog("تم تحويل لغة مظهر التطبيق إلى: ${item.second}")
+                                            Toast.makeText(context, "🎨 تم تطبيق اللون وبناء طابع الهوية الموحد: ${item.second}", Toast.LENGTH_SHORT).show()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = item.second,
+                                        color = if (item.first == "#FFD700") Color.Black else Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        
+                        // Custom hex color input section
+                        Text("أو عيّن لوناً مخصّصاً كلياً باختيار الـ HEX الخاص بك:", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextField(
+                                value = customHexColorValue,
+                                onValueChange = { input ->
+                                    if (input.length <= 7) {
+                                        customHexColorValue = input
+                                    }
+                                    if (input.matches(Regex("^#[0-9a-fA-F]{6}$"))) {
+                                        viewModel.appPrimaryColorStr = input
+                                    }
+                                },
+                                placeholder = { Text("مثال: #00FFCC", fontSize = 11.sp, color = Color.Gray) },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                colors = TextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color.Black,
+                                    unfocusedContainerColor = Color.Black
+                                ),
+                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, fontFamily = viewModel.appFontFamily)
+                            )
+                            
+                            Spacer(modifier = Modifier.width(8.dp))
+                            
+                            // Color circle preview
+                            val parsedColor = try {
+                                Color(android.graphics.Color.parseColor(customHexColorValue))
+                            } catch (e: Exception) {
+                                Color.Transparent
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(parsedColor, CircleShape)
+                                    .border(1.dp, Color.White, CircleShape)
+                            )
+                            
+                            Spacer(modifier = Modifier.width(8.dp))
+                            
+                            Button(
+                                onClick = {
+                                    if (customHexColorValue.matches(Regex("^#[0-9a-fA-F]{6}$"))) {
+                                        viewModel.appPrimaryColorStr = customHexColorValue
+                                        viewModel.addActivityLog("تم تخصيص لون المالك المعياري إلى: $customHexColorValue")
+                                        Toast.makeText(context, "🎨 تم تطبيق لون المظهر الدقيق بنجاح!", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "⚠️ صيغة الـ HEX غير صحيحة، يرجى كتابتها كـ #00FFCC", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = if (parsedColor != Color.Transparent) parsedColor else viewModel.appPrimaryColor),
+                                shape = RoundedCornerShape(6.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("تطبيق 🎨", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -1385,6 +1496,39 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
+                        }
+
+                        // Real-time Display of Dynamic Registration Terms inside the Simulation Registration window
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1D24)),
+                            border = BorderStroke(1.dp, viewModel.appPrimaryColor.copy(alpha = 0.5f))
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = "🔴 شروط بنود الانضمام المعتمدة (يجب الموافقة عليها بالكامل):",
+                                    color = viewModel.appPrimaryColor,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = viewModel.appFontFamily
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                if (viewModel.registrationTerms.isEmpty()) {
+                                    Text("لا توجد شروط تسجيل محددة حالياً. يمكنك تصفح الدليل بحرية.", color = Color.Gray, fontSize = 10.sp, fontFamily = viewModel.appFontFamily)
+                                } else {
+                                    viewModel.registrationTerms.forEachIndexed { idx, term ->
+                                        Row(
+                                            modifier = Modifier.padding(vertical = 2.dp),
+                                            verticalAlignment = Alignment.Top
+                                        ) {
+                                            Text("${idx + 1}. ", color = viewModel.appPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(term.termText, color = Color.LightGray, fontSize = 10.sp, fontFamily = viewModel.appFontFamily)
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -1612,6 +1756,83 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                                 unfocusedContainerColor = Color.Black
                             )
                         )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextField(
+                            value = viewModel.aboutAppTitle,
+                            onValueChange = { 
+                                viewModel.aboutAppTitle = it 
+                                viewModel.addActivityLog("تعديل عنوان صفحة معلومات التطبيق الفرعي")
+                            },
+                            label = { Text("عنوان صفحة معلومات التطبيق الفرعي", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Black,
+                                unfocusedContainerColor = Color.Black
+                            )
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextField(
+                            value = viewModel.aboutAppDescription,
+                            onValueChange = { 
+                                viewModel.aboutAppDescription = it 
+                                viewModel.addActivityLog("تعديل وصف صفحة معلومات التطبيق")
+                            },
+                            label = { Text("الوصف التعريفي المكتوب بصفحة (عن التطبيق)", fontSize = 10.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Black,
+                                unfocusedContainerColor = Color.Black
+                            )
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            TextField(
+                                value = viewModel.aboutAppVersion,
+                                onValueChange = { viewModel.aboutAppVersion = it },
+                                label = { Text("إصدار التطبيق", fontSize = 10.sp) },
+                                modifier = Modifier.weight(1f),
+                                colors = TextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color.Black,
+                                    unfocusedContainerColor = Color.Black
+                                )
+                            )
+                            TextField(
+                                value = viewModel.aboutAppUsersStat,
+                                onValueChange = { viewModel.aboutAppUsersStat = it },
+                                label = { Text("إحصائية المشتركين", fontSize = 10.sp) },
+                                modifier = Modifier.weight(1f),
+                                colors = TextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color.Black,
+                                    unfocusedContainerColor = Color.Black
+                                )
+                            )
+                            TextField(
+                                value = viewModel.aboutAppProvidersStat,
+                                onValueChange = { viewModel.aboutAppProvidersStat = it },
+                                label = { Text("إحصائية الفنيين", fontSize = 10.sp) },
+                                modifier = Modifier.weight(1f),
+                                colors = TextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedContainerColor = Color.Black,
+                                    unfocusedContainerColor = Color.Black
+                                )
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(14.dp))
                         Divider(color = Color.DarkGray)
