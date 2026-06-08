@@ -1643,6 +1643,7 @@ fun MainScreen(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun AutoMarqueeText(
     text: String,
@@ -1652,42 +1653,15 @@ fun AutoMarqueeText(
     fontWeight: FontWeight = FontWeight.Bold,
     speedMs: Int = 45
 ) {
-    val scrollState = rememberScrollState()
-    
-    LaunchedEffect(key1 = text) {
-        while (true) {
-            scrollState.animateScrollTo(
-                value = scrollState.value + 4,
-                animationSpec = tween(durationMillis = speedMs, easing = LinearEasing)
-            )
-            if (scrollState.value >= scrollState.maxValue) {
-                scrollState.scrollTo(0)
-            }
-        }
-    }
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(scrollState, enabled = false),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = text,
-            color = color,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            maxLines = 1,
-            overflow = TextOverflow.Visible,
-            modifier = Modifier.padding(end = 60.dp)
+    Text(
+        text = text,
+        color = color,
+        fontSize = fontSize,
+        fontWeight = fontWeight,
+        maxLines = 1,
+        modifier = modifier.basicMarquee(
+            iterations = Int.MAX_VALUE,
+            delayMillis = 1000
         )
-        Text(
-            text = text,
-            color = color,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            maxLines = 1,
-            overflow = TextOverflow.Visible
-        )
-    }
+    )
 }
