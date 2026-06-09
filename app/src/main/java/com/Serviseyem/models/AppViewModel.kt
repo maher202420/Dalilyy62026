@@ -230,7 +230,7 @@ class AppViewModel : ViewModel() {
     var aboutAppProvidersStat by mutableStateOf("1,240")
 
     // General app primary style configs
-    private val _appPrimaryColorStr = mutableStateOf("#1B5E20") // Default Emerald Green
+    private val _appPrimaryColorStr = mutableStateOf("#FFD700") // Default Golden Accent
     var appPrimaryColorStr: String
         get() = _appPrimaryColorStr.value
         set(value) {
@@ -244,10 +244,10 @@ class AppViewModel : ViewModel() {
         get() = try {
             Color(android.graphics.Color.parseColor(appPrimaryColorStr))
         } catch (e: Exception) {
-            Color(0xFF1B5E20)
+            Color(0xFFFFD700)
         }
 
-    private val _appSecondaryColorStr = mutableStateOf("#FFC700") // Default Golden Accent
+    private val _appSecondaryColorStr = mutableStateOf("#03DAC6") // Default Teal/Secondary Accent
     var appSecondaryColorStr: String
         get() = _appSecondaryColorStr.value
         set(value) {
@@ -261,10 +261,10 @@ class AppViewModel : ViewModel() {
         get() = try {
             Color(android.graphics.Color.parseColor(appSecondaryColorStr))
         } catch (e: Exception) {
-            Color(0xFFFFC700)
+            Color(0xFF03DAC6)
         }
 
-    private val _appBackgroundColorStr = mutableStateOf("#FFFFFF") // Default White Background
+    private val _appBackgroundColorStr = mutableStateOf("#0A0A0C") // Default Dark Background
     var appBackgroundColorStr: String
         get() = _appBackgroundColorStr.value
         set(value) {
@@ -278,10 +278,10 @@ class AppViewModel : ViewModel() {
         get() = try {
             Color(android.graphics.Color.parseColor(appBackgroundColorStr))
         } catch (e: Exception) {
-            Color(0xFFFFFFFF)
+            Color(0xFF0A0A0C)
         }
 
-    private val _appTextColorStr = mutableStateOf("#000000") // Default Black Text
+    private val _appTextColorStr = mutableStateOf("#FFFFFF") // Default White Text
     var appTextColorStr: String
         get() = _appTextColorStr.value
         set(value) {
@@ -295,7 +295,7 @@ class AppViewModel : ViewModel() {
         get() = try {
             Color(android.graphics.Color.parseColor(appTextColorStr))
         } catch (e: Exception) {
-            Color(0xFF000000)
+            Color(0xFFFFFFFF)
         }
 
     // Chat widget settings parameters (default 60dp, supports scaling and colors)
@@ -465,7 +465,7 @@ class AppViewModel : ViewModel() {
 
     private fun initializeFirebaseDataIfNeeded() {
         firestore.collection("categories").get().addOnSuccessListener { query ->
-            if (query.isEmpty) {
+            if (query.isEmpty || query.size() < 9) {
                 val defaultCats = listOf(
                     Category(nameAr = "سباكة", nameEn = "Plumbing", description = "صيانة وتمديد شبكات المياه ومعالجة التسريبات بدقة", iconEmoji = "🔧", isPinned = true),
                     Category(nameAr = "كهرباء", nameEn = "Electrical", description = "تركيب وصيانة أنظمة الإنارة، وتمديدات الطاقة الشمسية والمولدات", iconEmoji = "⚡", isPinned = true),
@@ -473,8 +473,13 @@ class AppViewModel : ViewModel() {
                     Category(nameAr = "نجارة", nameEn = "Carpentry", description = "تصميم وتركيب وصيانة الأبواب والشبابيك والأثاث المودرن", iconEmoji = "🔨", isPinned = true),
                     Category(nameAr = "حدادة", nameEn = "Smithing", description = "تفصيل وتركيب البوابات والمظلات والحمايات الحديدية المتينة", iconEmoji = "⚙️", isPinned = true),
                     Category(nameAr = "تبريد وتكييف", nameEn = "Cooling & AC", description = "شحن وتوريد وصيانة غسيل أجهزة التكييف المركزي والاسبليت", iconEmoji = "❄️", isPinned = false),
-                    Category(nameAr = "صيانة", nameEn = "General Maintenance", description = "خدمات الصيانة الشاملة والترميمات المتكاملة للمباني", iconEmoji = "🛠️", isPinned = false)
+                    Category(nameAr = "صيانة", nameEn = "General Maintenance", description = "خدمات الصيانة الشاملة والترميمات المتكاملة للمباني", iconEmoji = "🛠️", isPinned = false),
+                    Category(nameAr = "ديكور وجبس", nameEn = "Decor & Gypsum", description = "تصميم وتنفيذ أرقى الديكورات الجبسية والأسقف المستعارة بدقة فنية", iconEmoji = "🏛️", isPinned = false),
+                    Category(nameAr = "تنظيف وتعقيم", nameEn = "Cleaning & Sterilization", description = "خدمات النظافة الشاملة للمنازل والمكاتب وجلي وتلميع البلاط", iconEmoji = "🧹", isPinned = false)
                 )
+                for (doc in query.documents) {
+                    doc.reference.delete()
+                }
                 for (cat in defaultCats) {
                     firestore.collection("categories").document(cat.id).set(cat)
                 }
@@ -573,11 +578,11 @@ class AppViewModel : ViewModel() {
                     "rememberMeNormal" to false,
                     "rememberMeBackdoor" to false,
                     "appSelectedFontName" to "Default",
-                    "appPrimaryColorStr" to "#1B5E20",
-                    "appSecondaryColorStr" to "#FFC700",
-                    "appBackgroundColorStr" to "#FFFFFF",
-                    "appTextColorStr" to "#000000",
-                    "chatSettingsIconColorStr" to "#064E3B",
+                    "appPrimaryColorStr" to "#FFD700",
+                    "appSecondaryColorStr" to "#03DAC6",
+                    "appBackgroundColorStr" to "#0A0A0C",
+                    "appTextColorStr" to "#FFFFFF",
+                    "chatSettingsIconColorStr" to "#FFD700",
                     "chatSettingsIconSize" to 60.0,
                     "isChatIconMutedHidden" to false,
                     "isChatIconPermDeleted" to false,

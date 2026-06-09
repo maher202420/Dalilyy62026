@@ -16,7 +16,10 @@ data class ServiceProvider(
     var biography: String = "",
     var profilePhotoUrl: String? = null,
     var status: String = "مقبول", // "معلق", "مقبول", "مرفوض"
-    var isChatMuted: Boolean = false // Admin can mute chat for specific providers
+    var isChatMuted: Boolean = false, // Admin can mute chat for specific providers
+    var gender: String = "ذكر", // "ذكر" / "أنثى"
+    var photoSource: String = "معرض الصور", // "معرض الصور" / "التقاط بالكاميرا"
+    var photoType: String = "صورة شخصية (سيلفي)" // "صورة شخصية (سيلفي)" / "صورة تعبيرية عن المهنة"
 )
 
 data class Category(

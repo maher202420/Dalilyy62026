@@ -57,10 +57,15 @@ fun MainScreen(
     var showBookingDialog by remember { mutableStateOf<ServiceProvider?>(null) }
     var showComplaintDialog by remember { mutableStateOf<ServiceProvider?>(null) }
     var showMyChatsOverviewDialog by remember { mutableStateOf(false) }
+    var showAiAssistantDialog by remember { mutableStateOf(false) }
 
     // Guest User Identity config
     var guestUserNameInput by remember { mutableStateOf("غسان الصبري") }
     var userDisplayName by remember { mutableStateOf("غسان الصبري") }
+
+    // Backdoor gate click counters
+    var logoClickCount by remember { mutableStateOf(0) }
+    var homeClickCount by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -73,7 +78,16 @@ fun MainScreen(
                         Text(
                             text = viewModel.appLogoEmoji,
                             fontSize = 24.sp,
-                            modifier = Modifier.testTag("app_logo_emoji")
+                            modifier = Modifier
+                                .testTag("app_logo_emoji")
+                                .clickable {
+                                    logoClickCount++
+                                    if (logoClickCount >= 5) {
+                                        logoClickCount = 0
+                                        showLoginDialog = true
+                                        Toast.makeText(context, if (viewModel.isArabic) "🔐 تم فك حظر البوابات الخلفية للإدارة!" else "Backdoor Admin Gate triggered!", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                         )
                         Column {
                             Text(
@@ -105,7 +119,14 @@ fun MainScreen(
                                             selectedCategory = null
                                             selectedCity = null
                                             searchQuery = ""
-                                            Toast.makeText(context, if (viewModel.isArabic) "تمت العودة للرئيسية والفلترة الافتراضية" else "Back to Default Filter", Toast.LENGTH_SHORT).show()
+                                            homeClickCount++
+                                            if (homeClickCount >= 5) {
+                                                homeClickCount = 0
+                                                showLoginDialog = true
+                                                Toast.makeText(context, if (viewModel.isArabic) "🔐 تم فك حظر البوابات الخلفية للإدارة!" else "Backdoor Admin Gate triggered!", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, if (viewModel.isArabic) "تمت العودة للرئيسية والفلترة الافتراضية" else "Back to Default Filter", Toast.LENGTH_SHORT).show()
+                                            }
                                         },
                                         modifier = Modifier.testTag("top_icon_home")
                                     ) {
@@ -178,27 +199,45 @@ fun MainScreen(
             }
         },
         floatingActionButton = {
-            // Check if floating action is allowed by settings
-            if (!viewModel.isChatIconMutedHidden && !viewModel.isChatIconPermDeleted) {
-                FloatingActionButton(
-                    onClick = {
-                        if (!viewModel.isChatInstantEnabled) {
-                            Toast.makeText(context, viewModel.chatDisabledMessage, Toast.LENGTH_LONG).show()
-                        } else {
-                            showMyChatsOverviewDialog = true
-                        }
-                    },
-                    containerColor = viewModel.chatSettingsIconColor,
-                    modifier = Modifier
-                        .size(viewModel.chatSettingsIconSize.dp)
-                        .testTag("floating_direct_chat_hub")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Chat,
-                        contentDescription = "Chats Manager Overview",
-                        tint = Color.White,
-                        modifier = Modifier.size((viewModel.chatSettingsIconSize * 0.5f).dp)
-                    )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = if (viewModel.aiAssistantAlignmentIsRight) Alignment.End else Alignment.Start
+            ) {
+                // AI Smart Assistant bubble
+                if (viewModel.showAiAssistantFloatingBubble) {
+                    FloatingActionButton(
+                        onClick = { showAiAssistantDialog = true },
+                        containerColor = viewModel.aiAssistantIconColor,
+                        modifier = Modifier
+                            .size(viewModel.aiAssistantIconSize.dp)
+                            .testTag("floating_ai_assistant_bubble")
+                    ) {
+                        Text("🤖", fontSize = (viewModel.aiAssistantIconSize * 0.45f).dp.value.sp)
+                    }
+                }
+
+                // General Direct Chat FAB
+                if (!viewModel.isChatIconMutedHidden && !viewModel.isChatIconPermDeleted) {
+                    FloatingActionButton(
+                        onClick = {
+                            if (!viewModel.isChatInstantEnabled) {
+                                Toast.makeText(context, viewModel.chatDisabledMessage, Toast.LENGTH_LONG).show()
+                            } else {
+                                showMyChatsOverviewDialog = true
+                            }
+                        },
+                        containerColor = viewModel.chatSettingsIconColor,
+                        modifier = Modifier
+                            .size(viewModel.chatSettingsIconSize.dp)
+                            .testTag("floating_direct_chat_hub")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Chat,
+                            contentDescription = "Chats Manager Overview",
+                            tint = Color.White,
+                            modifier = Modifier.size((viewModel.chatSettingsIconSize * 0.5f).dp)
+                        )
+                    }
                 }
             }
         }
@@ -893,14 +932,7 @@ fun MainScreen(
                                     .testTag("admin_pass_field")
                             )
 
-                            // Quick login shortcut help
-                            Text(
-                                text = "حساب الإدارة: WAM2026 / الرقم: maher736462",
-                                fontSize = 10.sp,
-                                color = viewModel.appPrimaryColor,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            // Secrets are fully hidden and secured
                         }
                     },
                     confirmButton = {
@@ -1141,6 +1173,157 @@ fun MainScreen(
                             }
                         ) {
                             Text("إرسال الشكوى")
+                        }
+                    }
+                )
+            }
+
+            // Dialog: AI Smart Assistant Chatbot
+            if (showAiAssistantDialog) {
+                var aiMessageInput by remember { mutableStateOf("") }
+                var aiChatHistory by remember {
+                    mutableStateOf(
+                        listOf(
+                            ChatMessage(
+                                senderName = "الذكاء الاصطناعي",
+                                senderRole = "assistant",
+                                messageText = "أهلاً بك! أنا مساعدك الذكي لمطابقة وتسهيل الوصول لخدمات الصيانة باليمن 🇾🇪.\n\nبإمكانك كتابة ما تبحث عنه (مثال: 'أحتاج سباك ممتاز في صنعاء' أو 'من هو أفضل كهربائي؟') وسأقوم بتحليل طلبك ومطابقتك فوراً بمزودي الخدمة المناسبين!"
+                            )
+                        )
+                    )
+                }
+                val aiHistoryState = rememberLazyListState()
+
+                LaunchedEffect(aiChatHistory.size) {
+                    if (aiChatHistory.isNotEmpty()) {
+                        aiHistoryState.animateScrollToItem(aiChatHistory.size - 1)
+                    }
+                }
+
+                AlertDialog(
+                    onDismissRequest = { showAiAssistantDialog = false },
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("🤖", fontSize = 22.sp)
+                            Text("المساعد الموثوق الذكي", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    text = {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(380.dp)
+                        ) {
+                            LazyColumn(
+                                state = aiHistoryState,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(aiChatHistory) { msg ->
+                                    val isMe = msg.senderRole == "user"
+                                    val align = if (isMe) Alignment.End else Alignment.Start
+                                    val bubbleBg = if (isMe) viewModel.appPrimaryColor else Color(0xFF2C2C30)
+                                    val textColor = Color.White
+
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalAlignment = align
+                                    ) {
+                                        Card(
+                                            colors = CardDefaults.cardColors(containerColor = bubbleBg),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Column(modifier = Modifier.padding(10.dp)) {
+                                                Text(
+                                                    text = msg.senderName,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 9.sp,
+                                                    color = if (isMe) Color.LightGray else viewModel.appPrimaryColor
+                                                )
+                                                Text(
+                                                    text = msg.messageText,
+                                                    fontSize = 12.sp,
+                                                    color = textColor
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = aiMessageInput,
+                                    onValueChange = { aiMessageInput = it },
+                                    placeholder = { Text("اكتب طلبك هنا...", fontSize = 11.sp, color = Color.Gray) },
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 2,
+                                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
+                                )
+                                Button(
+                                    onClick = {
+                                        if (aiMessageInput.isNotBlank()) {
+                                            val userContent = aiMessageInput
+                                            aiChatHistory = aiChatHistory + ChatMessage(
+                                                senderName = userDisplayName,
+                                                senderRole = "user",
+                                                messageText = userContent
+                                            )
+                                            aiMessageInput = ""
+
+                                            val normalized = userContent.lowercase()
+                                            val matchedCategory = viewModel.categories.find { cat ->
+                                                normalized.contains(cat.nameAr) || normalized.contains(cat.nameEn.lowercase())
+                                            }
+                                            val matchedCity = viewModel.cities.find { city ->
+                                                normalized.contains(city.nameAr) || normalized.contains(city.nameEn.lowercase())
+                                            }
+
+                                            val matchedProviders = viewModel.providers.filter { prov ->
+                                                val catMatch = matchedCategory == null || prov.specialty.contains(matchedCategory.nameAr, ignoreCase = true)
+                                                val cityMatch = matchedCity == null || prov.city.contains(matchedCity.nameAr, ignoreCase = true)
+                                                val keywordMatch = normalized.contains(prov.name.lowercase()) || normalized.contains(prov.specialty.lowercase()) || normalized.contains(prov.city.lowercase())
+                                                (catMatch && cityMatch) || keywordMatch
+                                            }
+
+                                            val aiReply = if (matchedProviders.isNotEmpty()) {
+                                                val listText = matchedProviders.take(3).mapIndexed { idx, p ->
+                                                    "📍 ${idx + 1}. *${p.name}* (${p.specialty}) في *${p.city}*\n📞 الهاتف: ${p.phone}\n⭐ التقييم: ${p.rating} (${p.ratingsCount} رأي)\n"
+                                                }.joinToString("\n")
+                                                "عثرت لك على مزودي الخدمة التاليين بالدليل الموثوق:\n\n$listText\nبإمكانك التواصل معهم مباشرة بالاتصال الهاتفي أو الدردشة الفورية من الواجهة الرئيسية!"
+                                            } else {
+                                                "أهلاً بك! لقد استلمت رسالتك: '$userContent'.\n\nتلميح مفيد: جرب الاستفسار بكلمات واضحة مثل 'كهرباء صنعاء' أو 'سباك إب' لعرض النتائج المناسبة فوراً!"
+                                            }
+
+                                            aiChatHistory = aiChatHistory + ChatMessage(
+                                                senderName = "الذكاء الاصطناعي",
+                                                senderRole = "assistant",
+                                                messageText = aiReply
+                                            )
+                                        }
+                                    }
+                                ) {
+                                    Text("إرسال", fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(onClick = { showAiAssistantDialog = false }) {
+                            Text("إغلاق")
                         }
                     }
                 )
