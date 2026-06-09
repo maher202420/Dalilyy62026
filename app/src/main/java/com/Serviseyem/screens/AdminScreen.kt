@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -77,7 +78,7 @@ fun AdminScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFF0A0A0C))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             // Horizontal Admin tabs
             ScrollableTabRow(
@@ -137,6 +138,13 @@ fun AdminScreen(
             var adminReplyText by remember { mutableStateOf("") }
             val messages = viewModel.chatMessages.filter { it.chatId == session.id }
                 .sortedBy { it.timestamp }
+
+            val adminChatListState = rememberLazyListState()
+            LaunchedEffect(messages.size) {
+                if (messages.isNotEmpty()) {
+                    adminChatListState.animateScrollToItem(messages.size - 1)
+                }
+            }
 
             AlertDialog(
                 onDismissRequest = { selectedAdminChatSession = null },
@@ -198,10 +206,11 @@ fun AdminScreen(
 
                         // Messages scroll
                         LazyColumn(
+                            state = adminChatListState,
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxWidth()
-                                .background(Color(0xFF0F0F12))
+                                .background(MaterialTheme.colorScheme.background)
                                 .padding(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
@@ -322,7 +331,25 @@ fun AdminSettingsSubSection(viewModel: AppViewModel) {
                     OutlinedTextField(
                         value = viewModel.appPrimaryColorStr,
                         onValueChange = { viewModel.appPrimaryColorStr = it },
-                        label = { Text("كود الـ Hex للون الرئيسي (مثال: #FFD700)") },
+                        label = { Text("كود الـ Hex للون الرئيسي (مثال: #1B5E20)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = viewModel.appSecondaryColorStr,
+                        onValueChange = { viewModel.appSecondaryColorStr = it },
+                        label = { Text("كود الـ Hex للون الثانوي (مثال: #FFC700)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = viewModel.appBackgroundColorStr,
+                        onValueChange = { viewModel.appBackgroundColorStr = it },
+                        label = { Text("كود الـ Hex لخلفية الشاشات (مثال: #FFFFFF)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = viewModel.appTextColorStr,
+                        onValueChange = { viewModel.appTextColorStr = it },
+                        label = { Text("كود الـ Hex للون النصوص (مثال: #000000)") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -453,7 +480,7 @@ fun AdminSettingsSubSection(viewModel: AppViewModel) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("مستند تذييل التطبيق مرئي للكل", fontSize = 12.sp, color = Color.White)
-                        Switch(value = viewModel.isFooterVisible, onValueChange = { viewModel.isFooterVisible = it })
+                        Switch(checked = viewModel.isFooterVisible, onCheckedChange = { viewModel.isFooterVisible = it })
                     }
                     OutlinedTextField(
                         value = viewModel.footerText,
@@ -502,7 +529,7 @@ fun AdminSettingsSubSection(viewModel: AppViewModel) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("تمكين قسم نقاط الولاء للأعضاء باليمن", fontSize = 12.sp, color = Color.White)
-                        Switch(value = viewModel.showLoyaltySection, onValueChange = { viewModel.showLoyaltySection = it })
+                        Switch(checked = viewModel.showLoyaltySection, onCheckedChange = { viewModel.showLoyaltySection = it })
                     }
                     OutlinedTextField(
                         value = viewModel.loyaltyCardTitle,
@@ -547,7 +574,7 @@ fun AdminChatsSubSection(viewModel: AppViewModel, onOpenChatSession: (ChatSessio
                             Text("الخدمة الفورية نشطة للكل بالدليل", fontSize = 12.sp, color = Color.White)
                             Text("تعطيل الخدمة يظهر إعلان التوجيه للتواصل المباشر", fontSize = 10.sp, color = Color.Gray)
                         }
-                        Switch(value = viewModel.isChatInstantEnabled, onValueChange = { viewModel.isChatInstantEnabled = it })
+                        Switch(checked = viewModel.isChatInstantEnabled, onCheckedChange = { viewModel.isChatInstantEnabled = it })
                     }
 
                     OutlinedTextField(
@@ -567,7 +594,7 @@ fun AdminChatsSubSection(viewModel: AppViewModel, onOpenChatSession: (ChatSessio
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("كتم وإخفاء أيقونة الدردشة مؤقتاً", fontSize = 11.sp, color = Color.LightGray)
-                        Switch(value = viewModel.isChatIconMutedHidden, onValueChange = { viewModel.isChatIconMutedHidden = it })
+                        Switch(checked = viewModel.isChatIconMutedHidden, onCheckedChange = { viewModel.isChatIconMutedHidden = it })
                     }
 
                     Row(
@@ -576,7 +603,7 @@ fun AdminChatsSubSection(viewModel: AppViewModel, onOpenChatSession: (ChatSessio
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("حذف الأيقونة نهائياً عن الشاشات", fontSize = 11.sp, color = Color.LightGray)
-                        Switch(value = viewModel.isChatIconPermDeleted, onValueChange = { viewModel.isChatIconPermDeleted = it })
+                        Switch(checked = viewModel.isChatIconPermDeleted, onCheckedChange = { viewModel.isChatIconPermDeleted = it })
                     }
 
                     Row(
@@ -773,7 +800,7 @@ fun AdminProvidersSubSection(viewModel: AppViewModel) {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("وضع مميز (VIP Golden Card)", fontSize = 11.sp, color = Color.White)
-                            Switch(value = isVip, onValueChange = { isVip = it })
+                            Switch(checked = isVip, onCheckedChange = { isVip = it })
                         }
 
                         Button(
@@ -839,8 +866,8 @@ fun AdminProvidersSubSection(viewModel: AppViewModel) {
                             Text("تعطيل تلقي الفني لأي رسائل واردة من الزبائن", fontSize = 9.sp, color = Color.Gray)
                         }
                         Switch(
-                            value = p.isChatMuted,
-                            onValueChange = { viewModel.toggleProviderChatMute(p) }
+                            checked = p.isChatMuted,
+                            onCheckedChange = { viewModel.toggleProviderChatMute(p) }
                         )
                     }
                 }

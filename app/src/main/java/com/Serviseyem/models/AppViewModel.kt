@@ -230,7 +230,7 @@ class AppViewModel : ViewModel() {
     var aboutAppProvidersStat by mutableStateOf("1,240")
 
     // General app primary style configs
-    private val _appPrimaryColorStr = mutableStateOf("#FFD700") // Default Golden Accent
+    private val _appPrimaryColorStr = mutableStateOf("#1B5E20") // Default Emerald Green
     var appPrimaryColorStr: String
         get() = _appPrimaryColorStr.value
         set(value) {
@@ -244,7 +244,58 @@ class AppViewModel : ViewModel() {
         get() = try {
             Color(android.graphics.Color.parseColor(appPrimaryColorStr))
         } catch (e: Exception) {
-            Color(0xFFFFD700)
+            Color(0xFF1B5E20)
+        }
+
+    private val _appSecondaryColorStr = mutableStateOf("#FFC700") // Default Golden Accent
+    var appSecondaryColorStr: String
+        get() = _appSecondaryColorStr.value
+        set(value) {
+            if (_appSecondaryColorStr.value != value) {
+                _appSecondaryColorStr.value = value
+                updateSettingsField("appSecondaryColorStr", value)
+            }
+        }
+
+    val appSecondaryColor: Color
+        get() = try {
+            Color(android.graphics.Color.parseColor(appSecondaryColorStr))
+        } catch (e: Exception) {
+            Color(0xFFFFC700)
+        }
+
+    private val _appBackgroundColorStr = mutableStateOf("#FFFFFF") // Default White Background
+    var appBackgroundColorStr: String
+        get() = _appBackgroundColorStr.value
+        set(value) {
+            if (_appBackgroundColorStr.value != value) {
+                _appBackgroundColorStr.value = value
+                updateSettingsField("appBackgroundColorStr", value)
+            }
+        }
+
+    val appBackgroundColor: Color
+        get() = try {
+            Color(android.graphics.Color.parseColor(appBackgroundColorStr))
+        } catch (e: Exception) {
+            Color(0xFFFFFFFF)
+        }
+
+    private val _appTextColorStr = mutableStateOf("#000000") // Default Black Text
+    var appTextColorStr: String
+        get() = _appTextColorStr.value
+        set(value) {
+            if (_appTextColorStr.value != value) {
+                _appTextColorStr.value = value
+                updateSettingsField("appTextColorStr", value)
+            }
+        }
+
+    val appTextColor: Color
+        get() = try {
+            Color(android.graphics.Color.parseColor(appTextColorStr))
+        } catch (e: Exception) {
+            Color(0xFF000000)
         }
 
     // Chat widget settings parameters (default 60dp, supports scaling and colors)
@@ -522,7 +573,10 @@ class AppViewModel : ViewModel() {
                     "rememberMeNormal" to false,
                     "rememberMeBackdoor" to false,
                     "appSelectedFontName" to "Default",
-                    "appPrimaryColorStr" to "#FFD700",
+                    "appPrimaryColorStr" to "#1B5E20",
+                    "appSecondaryColorStr" to "#FFC700",
+                    "appBackgroundColorStr" to "#FFFFFF",
+                    "appTextColorStr" to "#000000",
                     "chatSettingsIconColorStr" to "#064E3B",
                     "chatSettingsIconSize" to 60.0,
                     "isChatIconMutedHidden" to false,
@@ -645,7 +699,10 @@ class AppViewModel : ViewModel() {
                     _supportEmail.value = doc.getString("supportEmail") ?: "support@serviseyem.com"
                     _supportWhatsapp.value = doc.getString("supportWhatsapp") ?: "967777644670"
                     _appSelectedFontName.value = doc.getString("appSelectedFontName") ?: "Default"
-                    _appPrimaryColorStr.value = doc.getString("appPrimaryColorStr") ?: "#FFD700"
+                    _appPrimaryColorStr.value = doc.getString("appPrimaryColorStr") ?: "#1B5E20"
+                    _appSecondaryColorStr.value = doc.getString("appSecondaryColorStr") ?: "#FFC700"
+                    _appBackgroundColorStr.value = doc.getString("appBackgroundColorStr") ?: "#FFFFFF"
+                    _appTextColorStr.value = doc.getString("appTextColorStr") ?: "#000000"
                     _chatSettingsIconColorStr.value = doc.getString("chatSettingsIconColorStr") ?: "#064E3B"
                     _chatSettingsIconSize.value = doc.getDouble("chatSettingsIconSize")?.toFloat() ?: 60f
                     _isChatIconMutedHidden.value = doc.getBoolean("isChatIconMutedHidden") ?: false

@@ -16,7 +16,7 @@ import com.Serviseyem.ui.theme.ServisEmTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState: Bundle?)
+        super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             val appViewModel: AppViewModel = viewModel()
@@ -24,6 +24,9 @@ class MainActivity : ComponentActivity() {
 
             ServisEmTheme(
                 primaryColor = appViewModel.appPrimaryColor,
+                secondaryColor = appViewModel.appSecondaryColor,
+                backgroundColor = appViewModel.appBackgroundColor,
+                textColor = appViewModel.appTextColor,
                 fontFamily = appViewModel.appFontFamily
             ) {
                 NavHost(

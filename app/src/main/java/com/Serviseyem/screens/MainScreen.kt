@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -206,7 +207,7 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFF0F0F11))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             LazyColumn(
                 modifier = Modifier
@@ -609,6 +610,13 @@ fun MainScreen(
                         val messages = viewModel.chatMessages.filter { it.chatId == currentSessionId }
                             .sortedBy { it.timestamp }
 
+                        val chatListState = rememberLazyListState()
+                        LaunchedEffect(messages.size) {
+                            if (messages.isNotEmpty()) {
+                                chatListState.animateScrollToItem(messages.size - 1)
+                            }
+                        }
+
                         AlertDialog(
                             onDismissRequest = { viewModel.activeChatSessionId = null },
                             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
@@ -642,10 +650,11 @@ fun MainScreen(
                                 Column(modifier = Modifier.fillMaxSize()) {
                                     // Chat content history scrollbox
                                     LazyColumn(
+                                        state = chatListState,
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxWidth()
-                                            .background(Color(0xFF0A0A0C))
+                                            .background(MaterialTheme.colorScheme.background)
                                             .padding(8.dp),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
@@ -665,8 +674,8 @@ fun MainScreen(
                                             items(messages) { msg ->
                                                 val isMe = msg.senderRole == "user"
                                                 val align = if (isMe) Alignment.End else Alignment.Start
-                                                val bubbleBg = if (isMe) viewModel.chatSettingsIconColor else Color(0xFF2C2C30)
-                                                val textColor = Color.White
+                                                val bubbleBg = if (isMe) viewModel.chatSettingsIconColor else MaterialTheme.colorScheme.surfaceVariant
+                                                val textColor = if (isMe) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
 
                                                 Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = align) {
                                                     Card(
@@ -678,7 +687,7 @@ fun MainScreen(
                                                                 text = msg.senderName,
                                                                 fontWeight = FontWeight.Bold,
                                                                 fontSize = 9.sp,
-                                                                color = if (isMe) viewModel.appPrimaryColor else Color.LightGray
+                                                                color = if (isMe) viewModel.appPrimaryColor else viewModel.appSecondaryColor
                                                             )
                                                             Text(
                                                                 text = msg.messageText,
