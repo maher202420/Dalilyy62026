@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
 import com.Serviseyem.models.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +34,9 @@ fun AdminScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    BackHandler {
+        onNavigateBack()
+    }
     var activeTab by remember { mutableStateOf("dashboard") } // "dashboard", "chat_admin", "icon_settings", "logs"
 
     // Backdoor secret pass gate

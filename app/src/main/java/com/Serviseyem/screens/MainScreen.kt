@@ -29,6 +29,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.graphics.graphicsLayer
 import com.Serviseyem.models.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -43,14 +46,44 @@ fun MainScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    // Dialogue triggers
+    var showRatingDialog by remember { mutableStateOf(false) }
+    var showNewBookingCreator by remember { mutableStateOf(false) }
+    var showChatConversationPanel by remember { mutableStateOf(false) }
+    var showAboutAppDialog by remember { mutableStateOf(false) }
+    var showAiAssistantDialog by remember { mutableStateOf(false) }
+
+    var backPressTime by remember { mutableStateOf(0L) }
+
+    BackHandler {
+        if (showRatingDialog) {
+            showRatingDialog = false
+        } else if (showNewBookingCreator) {
+            showNewBookingCreator = false
+        } else if (showChatConversationPanel) {
+            showChatConversationPanel = false
+        } else if (showAboutAppDialog) {
+            showAboutAppDialog = false
+        } else if (showAiAssistantDialog) {
+            showAiAssistantDialog = false
+        } else {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - backPressTime < 2000) {
+                (context as? ComponentActivity)?.finish()
+            } else {
+                backPressTime = currentTime
+                Toast.makeText(context, "اضغط مرة أخرى للخروج من التطبيق", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     // Filter and search elements
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf<String?>(null) }
     var selectedCityFilter by remember { mutableStateOf<String?>(null) }
     var userSearchRadiusLimit by remember { mutableDoubleStateOf(viewModel.mapRadiusKm) }
 
-    // Dialogue triggers
-    var showRatingDialog by remember { mutableStateOf(false) }
+    // Other Dialogue states
     var selectedProviderForRating by remember { mutableStateOf<ServiceProvider?>(null) }
     var ratingStarsSelected by remember { mutableIntStateOf(5) }
     var ratingCommentText by remember { mutableStateOf("") }
@@ -60,7 +93,6 @@ fun MainScreen(
     var voiceTimerJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     // Booking appointment triggers
-    var showNewBookingCreator by remember { mutableStateOf(false) }
     var bookingCustomerName by remember { mutableStateOf("") }
     var bookingCustomerPhone by remember { mutableStateOf("") }
     var selectedTechForBooking by remember { mutableStateOf<ServiceProvider?>(null) }
@@ -68,17 +100,14 @@ fun MainScreen(
     var bookingTimeStr by remember { mutableStateOf("04:30 م") }
 
     // Chat bubble triggers
-    var showChatConversationPanel by remember { mutableStateOf(false) }
     var selectSessionForChat by remember { mutableStateOf<ChatSession?>(null) }
     var newChatMessageInput by remember { mutableStateOf("") }
-    var showAboutAppDialog by remember { mutableStateOf(false) }
 
     // Backdoor secret tapping indicator
     var secretHeaderFlagTapCount by remember { mutableIntStateOf(0) }
     var secretFooterVersionTapCount by remember { mutableIntStateOf(0) }
 
     // AI Intelligent Assistant state variables (Gemini compatible offline fallback)
-    var showAiAssistantDialog by remember { mutableStateOf(false) }
     var aiAssistantMessages by remember {
         mutableStateOf(listOf(
             ChatMessage(
@@ -967,45 +996,47 @@ fun MainScreen(
                 }
 
                 // 9. Simple bottom footer info as in image layout specs
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                if (viewModel.isFooterVisible) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(
-                                "عن المنصة وبنود الدليل ℹ️",
-                                color = Color.LightGray,
-                                fontSize = 11.sp,
-                                fontFamily = viewModel.appFontFamily,
-                                modifier = Modifier
-                                    .clickable {
-                                        showAboutAppDialog = true
-                                    }
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "عن المنصة وبنود الدليل ℹ️",
+                                    color = Color.LightGray,
+                                    fontSize = 11.sp,
+                                    fontFamily = viewModel.appFontFamily,
+                                    modifier = Modifier
+                                        .clickable {
+                                            showAboutAppDialog = true
+                                        }
+                                )
 
-                            // Tapped version 7 times backdoor gate
-                            Text(
-                                text = viewModel.footerText,
-                                color = viewModel.appPrimaryColor,
-                                fontSize = viewModel.footerFontSize.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                fontFamily = viewModel.appFontFamily,
-                                modifier = Modifier.clickable {
-                                    secretFooterVersionTapCount++
-                                    if (secretFooterVersionTapCount >= 7) {
-                                        secretFooterVersionTapCount = 0
-                                        Toast.makeText(context, "🎯 فتح بوابة لوحة التحكم الإدارية عبر الإصدار!", Toast.LENGTH_SHORT).show()
-                                        onNavigateToAdmin()
+                                // Tapped version 7 times backdoor gate
+                                Text(
+                                    text = viewModel.footerText,
+                                    color = viewModel.appPrimaryColor,
+                                    fontSize = viewModel.footerFontSize.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontFamily = viewModel.appFontFamily,
+                                    modifier = Modifier.clickable {
+                                        secretFooterVersionTapCount++
+                                        if (secretFooterVersionTapCount >= 7) {
+                                            secretFooterVersionTapCount = 0
+                                            Toast.makeText(context, "🎯 فتح بوابة لوحة التحكم الإدارية عبر الإصدار!", Toast.LENGTH_SHORT).show()
+                                            onNavigateToAdmin()
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
@@ -1441,7 +1472,7 @@ fun ChatConversationDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         
-                        IconButton(
+                        Button(
                             onClick = {
                                 if (newChatMessageInput.isNotEmpty()) {
                                     val m = ChatMessage(
@@ -1467,16 +1498,32 @@ fun ChatConversationDialog(
                                     }
                                 }
                             },
-                            modifier = Modifier
-                                .size(46.dp)
-                                .background(viewModel.appPrimaryColor, RoundedCornerShape(8.dp))
+                            colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.height(48.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Send,
-                                contentDescription = "Send",
-                                tint = Color.Black,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "إرسال",
+                                    color = Color.Black,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = viewModel.appFontFamily
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Send,
+                                    contentDescription = "Send",
+                                    tint = Color.Black,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .graphicsLayer(scaleX = -1f) // Flipped for Arabic RTL
+                                )
+                            }
                         }
                     }
                 }
@@ -1625,7 +1672,7 @@ fun AiAssistantConversationDialog(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     
-                    IconButton(
+                    Button(
                         onClick = {
                             if (newAiAssistantInputText.isNotEmpty()) {
                                 val userQuery = newAiAssistantInputText
@@ -1677,16 +1724,32 @@ fun AiAssistantConversationDialog(
                                 }
                             }
                         },
-                        modifier = Modifier
-                            .size(46.dp)
-                            .background(viewModel.appPrimaryColor, RoundedCornerShape(8.dp))
+                        colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.height(48.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Send,
-                            contentDescription = "Send AI",
-                            tint = Color.Black,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "إرسال",
+                                color = Color.Black,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = viewModel.appFontFamily
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.Send,
+                                contentDescription = "Send AI",
+                                tint = Color.Black,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .graphicsLayer(scaleX = -1f) // Flipped for Arabic RTL
+                            )
+                        }
                     }
                 }
             }
