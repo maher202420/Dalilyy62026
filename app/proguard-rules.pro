@@ -1,2 +1,2 @@
-# Add project specific ProGuard rules here.
-# You can control code shrinking, obfuscation, and optimization.
+# Add project specific Proguard rules here.
+# You can control the set of rules used by adding properties to this file.

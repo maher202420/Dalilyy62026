@@ -12,17 +12,11 @@ data class ServiceProvider(
     var ratingsCount: Int = 9,
     var isVip: Boolean = false,
     var isVerified: Boolean = false,
-    var selfieUrl: String? = null,
-    var baseFee: Int = 5000,
-    var latitude: Double? = 15.348,
-    var longitude: Double? = 44.206,
-    var isMale: Boolean = true,
-    var status: String = "مقبول", // "معلق" / "مقبول" / "مرفوض"
-    var biography: String = "أخصائي معتمد ذو خبرة عالية في الدقة والتشخيص المعياري.",
-    var rejectionReason: String? = null,
-    var subscriptionType: String? = "شهري معتمد",
-    var isSubscriptionVerified: Boolean = false,
-    var isPinned: Boolean = false
+    var baseFee: Int = 3000,
+    var biography: String = "",
+    var profilePhotoUrl: String? = null,
+    var status: String = "مقبول", // "معلق", "مقبول", "مرفوض"
+    var isChatMuted: Boolean = false // Admin can mute chat for specific providers
 )
 
 data class Category(
@@ -67,7 +61,15 @@ data class ChatSession(
     var techName: String = "",
     var lastMessage: String = "",
     var lastUpdated: Long = System.currentTimeMillis(),
-    var isBlocked: Boolean = false
+    var isBlocked: Boolean = false,
+    var techId: String = "" // maps to ServiceProvider
+)
+
+data class ChatParticipant(
+    var id: String = UUID.randomUUID().toString(),
+    var chatId: String = "",
+    var userId: String = "",
+    var role: String = "" // "user", "tech", "admin"
 )
 
 data class Complaint(
