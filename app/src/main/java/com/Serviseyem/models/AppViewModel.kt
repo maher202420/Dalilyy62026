@@ -15,11 +15,11 @@ import java.util.Locale
 
 class AppViewModel : ViewModel() {
 
-    // --- Firebase Firestore real-time listener simulation ---
+    // --- محرك المزامنة والحفظ المحلي في الذاكرة ---
     private val _footerUpdateFlow = MutableSharedFlow<Pair<String, Float>>(replay = 1)
     val footerUpdateFlow = _footerUpdateFlow.asSharedFlow()
 
-    // Realtime variables synced from Firestore
+    // متغيرات المزامنة الفورية المحلية
     var footerText by mutableStateOf("wam 2026")
     var footerFontSize by mutableStateOf(11f)
     var isFooterVisible by mutableStateOf(true)
@@ -47,11 +47,11 @@ class AppViewModel : ViewModel() {
     // Top Bar customizable order items: "home", "login", "register", "language", "refresh"
     var topBarIcons by mutableStateOf(listOf("home", "login", "register", "language", "refresh"))
 
-    // Footer update function simulating Firestore write
+    // تحديث تذييل الشاشات محلياً مع المزامنة الفورية
     fun updateFooterTextFromFirestore(text: String, size: Float) {
         viewModelScope.launch {
             _footerUpdateFlow.emit(Pair(text, size))
-            addActivityLog("نظام Firestore: تم تحديث نص التسييل إلى '$text' وحجم الخط إلى $size")
+            addActivityLog("النظام المحلي: تم تحديث نص التذييل إلى '$text' وحجم الخط إلى $size")
         }
     }
 
@@ -84,36 +84,38 @@ class AppViewModel : ViewModel() {
     var loyaltyCardHeightPadding by mutableStateOf(14f)
 
     init {
-        // Run simulated Firestore Snapshot Listener
+        // تشغيل مراقب التغييرات المحلي
         viewModelScope.launch {
             _footerUpdateFlow.collect { (text, size) ->
                 footerText = text
                 footerFontSize = size
-                addActivityLog("مستمع Firestore فوري: تم مزامنة تغييرات التذييل '$text' بنجاح لجميع أجهزة المستخدمين!")
+                addActivityLog("مستمع محلي فوري: تم مزامنة تغييرات التذييل '$text' بنجاح لجميع أجهزة المستخدمين!")
             }
         }
-        // Emit typical initial values
+        // إرسال القيم الافتراضية
         updateFooterTextFromFirestore("wam 2026", 11f)
     }
 
+    // حالة تسجيل دخول المشرف/المالك للبقاء مستقراً ومنع الخروج المفاجئ
+    var isAdminLoggedIn by mutableStateOf(false)
+
     // Central dynamic Lists
     var providers by mutableStateOf(listOf(
-        ServiceProvider(name = "المهندس وليد الصنعاني", phone = "777123456", specialty = "تبريد وتكييف", city = "صنعاء", rating = 4.9, isVip = true, isVerified = true, baseFee = 5000, biography = "أخصائي تكييف وتبريد مركزي ذو خبرة تفوق 10 سنوات."),
-        ServiceProvider(name = "أبو ماجد البريحي", phone = "777644670", specialty = "سباكة", city = "إب", rating = 4.8, isVip = true, isVerified = true, baseFee = 4000, biography = "خبير تركيب وصيانة الشبكات لجميع فلل وعمارات المحافظة."),
-        ServiceProvider(name = "أحمد جلال الحديدي", phone = "733654321", specialty = "كهرباء", city = "الحديدة", rating = 4.7, isVip = false, isVerified = true, baseFee = 3500, biography = "فني تمديدات وصيانة أنظمة الطاقة الشمسية والتيار المتردد."),
-        ServiceProvider(name = "ياسين النجار", phone = "711998877", specialty = "نجارة", city = "عدن", rating = 4.6, isVip = false, isVerified = false, baseFee = 6000, biography = "تفصيل وتجهيز أحدث الأثاث الخشبي والمودرن وغرف النوم."),
-        ServiceProvider(name = "فؤاد الحداد", phone = "777554433", specialty = "حدادة", city = "صنعاء", rating = 4.5, isVip = false, isVerified = false, baseFee = 4500, biography = "أعمال الأبواب والشبابيك والمظلات والدرابزين الفاخر.")
+        ServiceProvider(name = "المهندس وليد الصنعاني", phone = "777123456", specialty = "تبريد وتكييف", city = "صنعاء", rating = 4.9, ratingsCount = 14, isVip = true, isVerified = true, baseFee = 5000, biography = "أخصائي تكييف وتبريد مركزي ذو خبرة تفوق 10 سنوات في صيانة وتوريد كافة الأنظمة."),
+        ServiceProvider(name = "أبو ماجد البريحي", phone = "777644670", specialty = "سباكة", city = "إب", rating = 4.8, ratingsCount = 21, isVip = true, isVerified = true, baseFee = 4000, biography = "خبير تركيب وصيانة الشبكات لجميع فلل وعمارات المحافظة بأعلى جودة."),
+        ServiceProvider(name = "أحمد جلال الحديدي", phone = "733654321", specialty = "كهرباء", city = "الحديدة", rating = 4.7, ratingsCount = 9, isVip = false, isVerified = true, baseFee = 3500, biography = "فني تمديدات وصيانة أنظمة الطاقة الشمسية والتيار المتردد المنزلي."),
+        ServiceProvider(name = "ياسين النجار", phone = "711998877", specialty = "نجارة", city = "عدن", rating = 4.6, ratingsCount = 7, isVip = false, isVerified = false, baseFee = 6000, biography = "تفصيل وتجهيز أحدث الأثاث الخشبي والمودرن وغرف النوم بجودة وسرعة."),
+        ServiceProvider(name = "فؤاد الحداد", phone = "777554433", specialty = "حدادة", city = "صنعاء", rating = 4.5, ratingsCount = 5, isVip = false, isVerified = false, baseFee = 4500, biography = "أعمال الأبواب والشبابيك والمظلات والدرابزين الفاخر بدقة عالية.")
     ))
 
     var categories by mutableStateOf(listOf(
-        Category(nameAr = "صيانة", nameEn = "Maintenance", description = "أعمال السباكة والكهرباء والحدادة وتكييف وتبريد المنازل", iconEmoji = "🛠️", isPinned = true),
-        Category(nameAr = "طبية", nameEn = "Medical", description = "التمريض منزلي، الرعاية الصحية والاستشارات المستعجلة", iconEmoji = "🩺", isPinned = true),
-        Category(nameAr = "قانونية", nameEn = "Legal", description = "استشارات وصياغة عقود وقضايا إدارية وعمالية", iconEmoji = "⚖️", isPinned = true),
-        Category(nameAr = "سباكة", nameEn = "Plumbing", description = "صيانة الحمامات وتمديد الشبكات والمطابخ", iconEmoji = "🔧", isPinned = false),
-        Category(nameAr = "كهرباء", nameEn = "Electrical", description = "صيانة وتمديد خطوط الكهرباء وفحص المولدات", iconEmoji = "⚡", isPinned = false),
-        Category(nameAr = "نجارة", nameEn = "Carpentry", description = "تصليح الأبواب والمطابخ وتصميم غرف النوم", iconEmoji = "🪚", isPinned = false),
-        Category(nameAr = "تبريد وتكييف", nameEn = "Cooling", description = "تعبئة الفريون وغسيل المكيفات المركزية", iconEmoji = "❄️", isPinned = false),
-        Category(nameAr = "حدادة", nameEn = "Smithing", description = "تركيب البوابات الحديدية والدرابزين والحماية", iconEmoji = "🔨", isPinned = false)
+        Category(nameAr = "سباكة", nameEn = "Plumbing", description = "صيانة وتمديد شبكات المياه ومعالجة التسريبات بدقة", iconEmoji = "🔧", isPinned = true),
+        Category(nameAr = "كهرباء", nameEn = "Electrical", description = "تركيب وصيانة أنظمة الإنارة، وتمديدات الطاقة الشمسية والمولدات", iconEmoji = "⚡", isPinned = true),
+        Category(nameAr = "دهان", nameEn = "Painting", description = "أرقى أعمال الديكورات والدهانات الداخلية والخارجية والجبسية", iconEmoji = "🎨", isPinned = true),
+        Category(nameAr = "نجارة", nameEn = "Carpentry", description = "تصميم وتركيب وصيانة الأبواب والشبابيك والأثاث المودرن", iconEmoji = "🔨", isPinned = true),
+        Category(nameAr = "حدادة", nameEn = "Smithing", description = "تفصيل وتركيب البوابات والمظلات والحمايات الحديدية المتينة", iconEmoji = "⚙️", isPinned = true),
+        Category(nameAr = "تبريد وتكييف", nameEn = "Cooling & AC", description = "شحن وتوريد وصيانة غسيل أجهزة التكييف المركزي والاسبليت", iconEmoji = "❄️", isPinned = false),
+        Category(nameAr = "صيانة", nameEn = "General Maintenance", description = "خدمات الصيانة الشاملة والترميمات المتكاملة للمباني", iconEmoji = "🛠️", isPinned = false)
     ))
 
     var cities by mutableStateOf(listOf(
@@ -126,7 +128,7 @@ class AppViewModel : ViewModel() {
     ))
 
     var banners by mutableStateOf(listOf(
-        AdBanner(title = "تخفيضات صيفية 30% على صيانة المكيفات", contentType = "text", targetSectionId = "تبريد وتكييف", durationSeconds = 15, adSize = 10, isVisible = true)
+        AdBanner(title = "أهلاً بكم في دليل كل خدمات اليمن - خصم 30% على صيانة التكييف المركزي والمنزلي!", contentType = "text", targetSectionId = "تبريد وتكييف", durationSeconds = 15, adSize = 10, isVisible = true)
     ))
 
     var registrationRequests by mutableStateOf(listOf<ServiceProvider>())
@@ -136,9 +138,9 @@ class AppViewModel : ViewModel() {
     ))
 
     var chatMessages by mutableStateOf(listOf(
-        ChatMessage(chatId = "1", senderName = "العميل غسان", senderRole = "user", messageText = "السلام عليكم ورحمة الله"),
-        ChatMessage(chatId = "1", senderName = "أبو ماجد البريحي", senderRole = "tech", messageText = "وعليكم السلام ورحمة الله، أهلاً بك يا فندم"),
-        ChatMessage(chatId = "1", senderName = "العميل غسان", senderRole = "user", messageText = "متى تستطيع الوصول للمنزل؟")
+        ChatMessage(chatId = "1", senderName = "العميل غسان", senderRole = "user", messageText = "السلام عليكم ورحمة الله وبركاته."),
+        ChatMessage(chatId = "1", senderName = "أبو ماجد البريحي", senderRole = "tech", messageText = "وعليكم السلام ورحمة الله، أهلاً بك يا فندم. كيف يمكنني خدمتك؟"),
+        ChatMessage(chatId = "1", senderName = "العميل غسان", senderRole = "user", messageText = "متى تستطيع الوصول للمنزل؟ لمشاهدة تسريب الحمام.")
     ))
 
     var complaints by mutableStateOf(listOf(
@@ -150,9 +152,9 @@ class AppViewModel : ViewModel() {
     ))
 
     var registrationTerms by mutableStateOf(listOf(
-        RegistrationTerm(termText = "الالتزام التام بالأسعار المعيارية المقررة من الدليل."),
-        RegistrationTerm(termText = "دقة المواعيد والأمانة في معاينات الأجهزة الفنية."),
-        RegistrationTerm(termText = "توفير بطاقة شخصية وضمانة حضورية سارية المفعول.")
+        RegistrationTerm(termText = "الالتزام التام بالأسعار المعيارية المقررة من الدليل اليمن المعتمد."),
+        RegistrationTerm(termText = "دقة المواعيد والأمانة في الفحص والمعاينات الفنية المعيارية."),
+        RegistrationTerm(termText = "توفير بطاقة شخصية وضمانة حضورية سارية المفعول عند الطلب.")
     ))
 
     var admins by mutableStateOf(listOf(

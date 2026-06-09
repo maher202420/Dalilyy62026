@@ -40,7 +40,7 @@ fun AdminScreen(
     var activeTab by remember { mutableStateOf("dashboard") } // "dashboard", "chat_admin", "icon_settings", "logs"
 
     // Backdoor secret pass gate
-    var isOwnerPassed by remember { mutableStateOf(false) }
+    val isOwnerPassed = viewModel.isAdminLoggedIn
     var loginTabSelected by remember { mutableStateOf(0) } // 0 = Admin Login, 1 = Owner Backdoor
     
     // Inputs
@@ -55,11 +55,11 @@ fun AdminScreen(
     // Auto-login effect
     LaunchedEffect(Unit) {
         if (viewModel.rememberMeBackdoor) {
-            isOwnerPassed = true
+            viewModel.isAdminLoggedIn = true
             viewModel.activeAdminUsername = "المالك العام السرّي"
             viewModel.addActivityLog("دخول تلقائي معتمد للمسؤول السري للرئيسية")
         } else if (viewModel.rememberMeNormal) {
-            isOwnerPassed = true
+            viewModel.isAdminLoggedIn = true
             viewModel.activeAdminUsername = viewModel.adminUsernameSecret
             viewModel.addActivityLog("دخول تلقائي معتمد للمشرف الرئيسي")
         }
@@ -203,7 +203,7 @@ fun AdminScreen(
                             if (loginTabSelected == 0) {
                                 // Admin match
                                 if (adminUsernameInput == viewModel.adminUsernameSecret && adminPasswordInput == viewModel.adminPasswordSecret) {
-                                    isOwnerPassed = true
+                                    viewModel.isAdminLoggedIn = true
                                     viewModel.rememberMeNormal = rememberMeState
                                     viewModel.activeAdminUsername = viewModel.adminUsernameSecret
                                     viewModel.addActivityLog("تسجيل دخول مشرف معتمد ومصادق عليه: $adminUsernameInput")
@@ -214,7 +214,7 @@ fun AdminScreen(
                             } else {
                                 // Owner backdoor passcode match
                                 if (ownerPasswordInput == viewModel.ownerPasswordSecret) {
-                                    isOwnerPassed = true
+                                    viewModel.isAdminLoggedIn = true
                                     viewModel.rememberMeBackdoor = rememberMeState
                                     viewModel.activeAdminUsername = "المالك العام السرّي"
                                     viewModel.addActivityLog("دخول آمن وموثق للمالك الخلفي عبر شفرة المرور.")
@@ -256,7 +256,7 @@ fun AdminScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        isOwnerPassed = false
+                        viewModel.isAdminLoggedIn = false
                         viewModel.activeAdminUsername = null
                         ownerPasswordInput = ""
                     }) {
@@ -1645,8 +1645,8 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
                         Divider(color = Color.DarkGray)
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Part F: Firestore footer sync settings
-                        Text("و. تعديل تذييل التطبيق والمزامنة الفورية مع السحابة (Firestore):", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        // Part F: Local Memory sync settings
+                        Text("و. تعديل تذييل التطبيق والمزامنة الفورية مع الذاكرة المحلية:", color = viewModel.appPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(6.dp))
                         
                         var footerTextInputVal by remember(viewModel.footerText) { mutableStateOf(viewModel.footerText) }

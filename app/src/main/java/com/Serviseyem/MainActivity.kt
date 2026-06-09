@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.graphics.Color
 import com.Serviseyem.models.AppViewModel
 import com.Serviseyem.screens.AdminScreen
 import com.Serviseyem.screens.MainScreen
@@ -22,8 +23,8 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
 
             ServisEmTheme(
-                primaryColor = appViewModel.appPrimaryColor,
-                fontFamily = appViewModel.appFontFamily
+                primaryColor = Color(0xFFFFD700), // Stable static default Gold Accent for general theme structure
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Default
             ) {
                 NavHost(
                     navController = navController,
