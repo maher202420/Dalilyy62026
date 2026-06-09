@@ -1013,10 +1013,14 @@ fun MainScreen(
 
             // 10. Instant Chat Floating Message Room Bubble
             if (viewModel.chatSettingsVisible && !viewModel.chatSettingsDeleted && viewModel.isChatInstantEnabled) {
+                val chatAlignment = if (viewModel.chatSettingsAlignmentIsRight) Alignment.BottomEnd else Alignment.BottomStart
+                val chatPadStart = if (viewModel.chatSettingsAlignmentIsRight) 0.dp else 16.dp
+                val chatPadEnd = if (viewModel.chatSettingsAlignmentIsRight) 16.dp else 0.dp
                 Box(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 16.dp, bottom = 14.dp)
+                        .align(chatAlignment)
+                        .padding(start = chatPadStart, end = chatPadEnd, bottom = (14f + viewModel.chatSettingsOffsetY).dp)
+                        .offset(x = viewModel.chatSettingsOffsetX.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -1029,22 +1033,25 @@ fun MainScreen(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Chat,
-                            contentDescription = "الدردشة الفورية",
-                            tint = Color.White,
-                            modifier = Modifier.size((viewModel.chatSettingsIconSize / 2.5f).dp)
+                        Text(
+                            text = viewModel.chatSettingsIconEmoji,
+                            fontSize = (viewModel.chatSettingsIconSize / 2.2f).sp,
+                            modifier = Modifier.padding(bottom = 2.dp)
                         )
                     }
                 }
             }
 
             // 11. AI Smart Assistant Floating Bubble (Gemini compatible offline fallback)
-            if (viewModel.aiAssistantVisible) {
+            if (viewModel.aiAssistantVisible && !viewModel.aiAssistantDeleted) {
+                val aiAlignment = if (viewModel.aiAssistantAlignmentIsRight) Alignment.BottomEnd else Alignment.BottomStart
+                val aiPadStart = if (viewModel.aiAssistantAlignmentIsRight) 0.dp else 16.dp
+                val aiPadEnd = if (viewModel.aiAssistantAlignmentIsRight) 16.dp else 0.dp
                 Box(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 16.dp, bottom = 14.dp)
+                        .align(aiAlignment)
+                        .padding(start = aiPadStart, end = aiPadEnd, bottom = (14f + viewModel.aiAssistantOffsetY).dp)
+                        .offset(x = viewModel.aiAssistantOffsetX.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -1056,7 +1063,7 @@ fun MainScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "🤖",
+                            text = viewModel.aiAssistantIconEmoji,
                             fontSize = (viewModel.aiAssistantIconSize / 2.2f).sp,
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
@@ -1142,159 +1149,11 @@ fun MainScreen(
 
     // --- DIALOG POPUP: FULL CHAT MESSAGE FLOW PANEL ---
     if (showChatConversationPanel && selectSessionForChat != null) {
-        val s = selectSessionForChat!!
-        AlertDialog(
-            onDismissRequest = { showChatConversationPanel = false },
-            title = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("💬", fontSize = 20.sp)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Column {
-                            Text(s.techName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text("دردشة العميل: ${s.userName}", color = Color.Gray, fontSize = 10.sp)
-                        }
-                    }
-                    if (s.isBlocked) {
-                        Card(colors = CardDefaults.cardColors(containerColor = Color.Red)) {
-                            Text("محظور", color = Color.White, fontSize = 9.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
-                        }
-                    }
-                }
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .background(Color.Black, RoundedCornerShape(8.dp))
-                            .padding(8.dp)
-                    ) {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            reverseLayout = false
-                        ) {
-                            val activeMsgs = viewModel.chatMessages
-                            items(activeMsgs) { msg ->
-                                val isMe = msg.senderRole == "user"
-                                Box(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = if (isMe) Alignment.CenterStart else Alignment.CenterEnd
-                                ) {
-                                    Card(
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = if (isMe) viewModel.appPrimaryColor else Color(0xFF1E293B)
-                                        )
-                                    ) {
-                                        Column(modifier = Modifier.padding(8.dp)) {
-                                            Text(
-                                                text = msg.senderName,
-                                                color = if (isMe) Color.Black else viewModel.appPrimaryColor,
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = msg.messageText,
-                                                color = if (isMe) Color.Black else Color.White,
-                                                fontSize = 11.sp
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (s.isBlocked) {
-                        Text(
-                            text = "عذراً، لقد تم تجميد صلاحيات إرسال الرسائل الخاصة بك من قبل الأدمن لضمان الخصوصية.",
-                            color = Color.Red,
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextField(
-                                value = newChatMessageInput,
-                                onValueChange = { newChatMessageInput = it },
-                                placeholder = { Text("اكتب رسالتك كعميل هنا...", color = Color.LightGray, fontSize = 11.sp, fontFamily = viewModel.appFontFamily) },
-                                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 12.sp, fontFamily = viewModel.appFontFamily),
-                                modifier = Modifier.weight(1f),
-                                colors = TextFieldDefaults.colors(
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
-                                    focusedContainerColor = Color(0xFF1C2533),
-                                    unfocusedContainerColor = Color(0xFF1C2533),
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                singleLine = true
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            // Solid styled box for Send Button to avoid clipping or sizing issues in alert dialogs
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .background(viewModel.appPrimaryColor, RoundedCornerShape(8.dp))
-                                    .clickable {
-                                        if (newChatMessageInput.isNotEmpty()) {
-                                            val m = ChatMessage(
-                                                chatId = "1",
-                                                senderName = s.userName,
-                                                senderRole = "user",
-                                                messageText = newChatMessageInput
-                                            )
-                                            viewModel.chatMessages = viewModel.chatMessages + m
-                                            s.lastMessage = newChatMessageInput
-                                            newChatMessageInput = ""
-                                            
-                                            // Auto simulating tech reply in 1.5 seconds
-                                            coroutineScope.launch {
-                                                delay(1500)
-                                                val responseMsg = ChatMessage(
-                                                    chatId = "1",
-                                                    senderName = s.techName,
-                                                    senderRole = "tech",
-                                                    messageText = "مرحباً بك يا غالي تواصلك محط اهتمامي، سأتواجد لقضاء العمل فوراً!"
-                                                )
-                                                viewModel.chatMessages = viewModel.chatMessages + responseMsg
-                                                s.lastMessage = responseMsg.messageText
-                                            }
-                                        }
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Send,
-                                    contentDescription = "Send",
-                                    tint = Color.Black,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showChatConversationPanel = false }) {
-                    Text("إغلاق", color = Color.White, fontFamily = viewModel.appFontFamily)
-                }
-            },
-            containerColor = Color(0xFF111E2E)
+        ChatConversationDialog(
+            visible = showChatConversationPanel,
+            session = selectSessionForChat!!,
+            viewModel = viewModel,
+            onDismiss = { showChatConversationPanel = false }
         )
     }
 
@@ -1453,83 +1312,109 @@ fun MainScreen(
 
     // --- DIALOG POPUP: AI SMART ASSISTANT CONVERSATION ROOM ---
     if (showAiAssistantDialog) {
-        AlertDialog(
-            onDismissRequest = { showAiAssistantDialog = false },
-            title = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("🤖", fontSize = 24.sp, modifier = Modifier.padding(end = 6.dp))
+        AiAssistantConversationDialog(
+            visible = showAiAssistantDialog,
+            viewModel = viewModel,
+            onDismiss = { showAiAssistantDialog = false }
+        )
+    }
+}
+
+// ==========================================
+// CUSTOM COMPOSABLES FOR FOCUS PROTECTION & CHAT DESIGN
+// ==========================================
+
+@Composable
+fun ChatConversationDialog(
+    visible: Boolean,
+    session: ChatSession,
+    viewModel: AppViewModel,
+    onDismiss: () -> Unit
+) {
+    if (!visible) return
+    val coroutineScope = rememberCoroutineScope()
+    var newChatMessageInput by remember { mutableStateOf("") }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(viewModel.chatSettingsIconEmoji, fontSize = 20.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
                     Column {
-                        Text(
-                            text = "مساعد دليلي الذكي (Gemini)",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = viewModel.appFontFamily
-                        )
-                        Text(
-                            text = "متاح للعمل دون اتصال بالإنترنت ⚡",
-                            color = viewModel.appPrimaryColor,
-                            fontSize = 9.sp,
-                            fontFamily = viewModel.appFontFamily
-                        )
+                        Text(session.techName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = viewModel.appFontFamily)
+                        Text("دردشة العميل: ${session.userName}", color = Color.Gray, fontSize = 10.sp, fontFamily = viewModel.appFontFamily)
                     }
                 }
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(240.dp)
-                            .background(Color.Black, RoundedCornerShape(8.dp))
-                            .border(1.dp, Color(0xFF2E2E2E), RoundedCornerShape(8.dp))
-                            .padding(8.dp)
+                if (session.isBlocked) {
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.Red)) {
+                        Text("محظور", color = Color.White, fontSize = 9.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontFamily = viewModel.appFontFamily)
+                    }
+                }
+            }
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(Color.Black, RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        reverseLayout = false
                     ) {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(aiAssistantMessages) { msg ->
-                                val isMe = msg.senderRole == "user"
-                                Box(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = if (isMe) Alignment.CenterStart else Alignment.CenterEnd
+                        val activeMsgs = viewModel.chatMessages
+                        items(activeMsgs) { msg ->
+                            val isMe = msg.senderRole == "user"
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = if (isMe) Alignment.CenterStart else Alignment.CenterEnd
+                            ) {
+                                Card(
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isMe) Color(0xFF005C4B) else Color(0xFF202C33)
+                                    )
                                 ) {
-                                    Card(
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = if (isMe) viewModel.appPrimaryColor else Color(0xFF1E293B)
-                                        ),
-                                        border = BorderStroke(
-                                            width = 1.dp,
-                                            color = if (isMe) viewModel.appPrimaryColor else Color(0xFF334155)
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Text(
+                                            text = msg.senderName,
+                                            color = viewModel.appPrimaryColor,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = viewModel.appFontFamily
                                         )
-                                    ) {
-                                        Column(modifier = Modifier.padding(8.dp)) {
-                                            Text(
-                                                text = if (isMe) "أنت (مستعلم)" else msg.senderName,
-                                                color = if (isMe) Color.Black else viewModel.appPrimaryColor,
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                fontFamily = viewModel.appFontFamily
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = msg.messageText,
-                                                color = if (isMe) Color.Black else Color.White,
-                                                fontSize = 11.sp,
-                                                fontFamily = viewModel.appFontFamily
-                                            )
-                                        }
+                                        Text(
+                                            text = msg.messageText,
+                                            color = Color.White,
+                                            fontSize = 11.sp,
+                                            fontFamily = viewModel.appFontFamily
+                                        )
                                     }
                                 }
                             }
                         }
                     }
+                }
 
+                if (session.isBlocked) {
+                    Text(
+                        text = "عذراً، لقد تم تجميد صلاحيات إرسال الرسائل الخاصة بك من قبل الأدمن لضمان الخصوصية.",
+                        color = Color.Red,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(top = 8.dp),
+                        fontFamily = viewModel.appFontFamily
+                    )
+                } else {
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier
@@ -1538,109 +1423,281 @@ fun MainScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextField(
-                            value = newAiAssistantInputText,
-                            onValueChange = { newAiAssistantInputText = it },
-                            placeholder = {
-                                Text(
-                                    text = "اسأل عن فني، مدينة، أسعار فحص...",
-                                    color = Color.LightGray,
-                                    fontSize = 11.sp,
-                                    fontFamily = viewModel.appFontFamily
-                                )
-                            },
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontFamily = viewModel.appFontFamily
-                            ),
+                            value = newChatMessageInput,
+                            onValueChange = { newChatMessageInput = it },
+                            placeholder = { Text("اكتب رسالتك كعميل هنا...", color = Color.LightGray, fontSize = 11.sp, fontFamily = viewModel.appFontFamily) },
+                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 12.sp, fontFamily = viewModel.appFontFamily),
                             modifier = Modifier.weight(1f),
                             colors = TextFieldDefaults.colors(
                                 focusedTextColor = Color.White,
                                 unfocusedTextColor = Color.White,
-                                focusedContainerColor = Color(0xFF1A2235),
-                                unfocusedContainerColor = Color(0xFF1A2235),
+                                focusedContainerColor = Color(0xFF1C2533),
+                                unfocusedContainerColor = Color(0xFF1C2533),
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent
                             ),
                             shape = RoundedCornerShape(8.dp),
                             singleLine = true
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        IconButton(
+                            onClick = {
+                                if (newChatMessageInput.isNotEmpty()) {
+                                    val m = ChatMessage(
+                                        chatId = "1",
+                                        senderName = session.userName,
+                                        senderRole = "user",
+                                        messageText = newChatMessageInput
+                                    )
+                                    viewModel.chatMessages = viewModel.chatMessages + m
+                                    session.lastMessage = newChatMessageInput
+                                    newChatMessageInput = ""
+                                    
+                                    coroutineScope.launch {
+                                        delay(1500)
+                                        val responseMsg = ChatMessage(
+                                            chatId = "1",
+                                            senderName = session.techName,
+                                            senderRole = "tech",
+                                            messageText = "مرحباً بك يا غالي تواصلك محط اهتمامي، سأتواجد لقضاء العمل فوراً!"
+                                        )
+                                        viewModel.chatMessages = viewModel.chatMessages + responseMsg
+                                        session.lastMessage = responseMsg.messageText
+                                    }
+                                }
+                            },
                             modifier = Modifier
                                 .size(46.dp)
                                 .background(viewModel.appPrimaryColor, RoundedCornerShape(8.dp))
-                                .clickable {
-                                    if (newAiAssistantInputText.isNotEmpty()) {
-                                        val userQuery = newAiAssistantInputText
-                                        val userMsg = ChatMessage(
-                                            chatId = "ai",
-                                            senderName = "العميل",
-                                            senderRole = "user",
-                                            messageText = userQuery
-                                        )
-                                        aiAssistantMessages = aiAssistantMessages + userMsg
-                                        newAiAssistantInputText = ""
-
-                                        coroutineScope.launch {
-                                            delay(1000)
-                                            val queryNormalized = userQuery.lowercase()
-                                            val replyText = when {
-                                                queryNormalized.contains("سباك") || queryNormalized.contains("سباكة") -> {
-                                                    "المستشار الذكي: ممتاز! لدينا نخبة من السباكين كأعمال السباكة المنزلية الفاخرة مثل الأخصائي 'أبو ماجد البريحي' في إب، وقيمة معاينته 4000 ريال يمني ومتاح للاتصال اللحظي."
-                                                }
-                                                queryNormalized.contains("صنعاء") -> {
-                                                    "المستشار الذكي: نعم، في العاصمة صنعاء لدينا فنيون متميزون في عدة مجالات، فمثلاً 'المهندس وليد الصنعاني' هو عميد فنيي التبريد والتكييف، وهناك حدادون مهرة لمعالجة كافة الطلبات."
-                                                }
-                                                queryNormalized.contains("تكييف") || queryNormalized.contains("تبريد") || queryNormalized.contains("مكيف") -> {
-                                                    "المستشار الذكي: للتكيف والبرودة، لدينا 'المهندس وليد الصنعاني' في صنعاء، عميد التبريد المركزي وخبير الفريون والغسيل لمعاينة دقيقة تبلغ 5000 ريال يمني."
-                                                }
-                                                queryNormalized.contains("كهربا") || queryNormalized.contains("طاقة") -> {
-                                                    "المستشار الذكي: للكهرباء والطاقة الشمسية، الفني الموصى به بشدة هو 'أحمد جلال الحديدي' بمدينة الحديدة، ويمتاز بالتمديدات الآمنة وصيانة المولدات بكلفة معاينة 3500 ريال يمني فقط."
-                                                }
-                                                queryNormalized.contains("أسعار") || queryNormalized.contains("سعر") || queryNormalized.contains("كلفة") || queryNormalized.contains("فلوس") -> {
-                                                    "المستشار الذكي: يسير دليلنا على هيكل أسعار معياري عادل بالريال اليمني. تتراوح رسوم المعاينة في المنزل بين 3500 و 6000 ريال حسب التخصص، ويتم التفاهم على أجر الإصلاح الإجمالي بوضوح."
-                                                }
-                                                queryNormalized.contains("تسجيل") || queryNormalized.contains("انضمام") || queryNormalized.contains("كيف") -> {
-                                                    "المستشار الذكي: للانضمام كمهني معتمد، ادخل لوحة المالك واقرأ شروطه ثم أرسل صورتك والضمانات الفنية عبر نافذة التسجيل المتكاملة ليوافق عليها المشرف."
-                                                }
-                                                queryNormalized.contains("نقاط") || queryNormalized.contains("ولاء") -> {
-                                                    "المستشار الذكي: يمكنك كسب نقاط الولاء بتقييم الفنيين بعد إنجاز العمل (+15 نقطة)، وعند بلوغ 100 نقطة تستبدلها بخصم بقيمة 5000 ريال يمني!"
-                                                }
-                                                else -> {
-                                                    "المستشار الذكي: تساؤلك محط اهتمامي البالغ في دليلي الفني لخدمات اليمن. يتوفر لدينا سباكون، كهربائيون، نجارون، أخصائيو تبريد وحدادون بكافة المحافظات مجاناً وتواصل مباشر باتصال أو واتساب بنقرة واحدة!"
-                                                }
-                                            }
-                                            val aiMsg = ChatMessage(
-                                                chatId = "ai",
-                                                senderName = "مساعد دليلي الذكي 🤖",
-                                                senderRole = "admin",
-                                                messageText = replyText
-                                            )
-                                            aiAssistantMessages = aiAssistantMessages + aiMsg
-                                        }
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Send,
-                                contentDescription = "ارسل المساعد",
+                                contentDescription = "Send",
                                 tint = Color.Black,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAiAssistantDialog = false }) {
-                    Text("إغلاق المحادثة", color = Color.White, fontFamily = viewModel.appFontFamily)
-                }
-            },
-            containerColor = Color(0xFF141A28)
-        )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("إغلاق", color = Color.White, fontFamily = viewModel.appFontFamily)
+            }
+        },
+        containerColor = Color(0xFF111E2E)
+    )
+}
+
+@Composable
+fun AiAssistantConversationDialog(
+    visible: Boolean,
+    viewModel: AppViewModel,
+    onDismiss: () -> Unit
+) {
+    if (!visible) return
+    val coroutineScope = rememberCoroutineScope()
+    var newAiAssistantInputText by remember { mutableStateOf("") }
+    var aiAssistantMessages by remember {
+        mutableStateOf(listOf(
+            ChatMessage(
+                chatId = "ai",
+                senderName = "مساعد دليلي الذكي 🤖",
+                senderRole = "admin",
+                messageText = "مرحباً بك! أنا مستشارك الذكي اليمني في منصة دليلي الفاخرة للخدمات. اسألني عن الفنيين، كلفة المعاينة والتشخيص، أو كيفية التسجيل والانضمام بقائمة المهن وسأجيبك فوراً بدقة واحترافية وبشكل كامل دون إنترنت!"
+            )
+        ))
     }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(viewModel.aiAssistantIconEmoji, fontSize = 24.sp, modifier = Modifier.padding(end = 6.dp))
+                Column {
+                    Text(
+                        text = "مساعد دليلي الذكي (Gemini)",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = viewModel.appFontFamily
+                    )
+                    Text(
+                        text = "متاح للعمل دون اتصال بالإنترنت ⚡",
+                        color = viewModel.appPrimaryColor,
+                        fontSize = 9.sp,
+                        fontFamily = viewModel.appFontFamily
+                    )
+                }
+            }
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp)
+                        .background(Color.Black, RoundedCornerShape(8.dp))
+                        .border(1.dp, Color(0xFF2E2E2E), RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(aiAssistantMessages) { msg ->
+                            val isMe = msg.senderRole == "user"
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = if (isMe) Alignment.CenterStart else Alignment.CenterEnd
+                            ) {
+                                Card(
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isMe) Color(0xFF005C4B) else Color(0xFF2E2E3E)
+                                    ),
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        color = if (isMe) viewModel.appPrimaryColor else Color(0xFF334155)
+                                    )
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Text(
+                                            text = if (isMe) "أنت (مستعلم)" else msg.senderName,
+                                            color = viewModel.appPrimaryColor,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = viewModel.appFontFamily
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = msg.messageText,
+                                            color = Color.White,
+                                            fontSize = 11.sp,
+                                            fontFamily = viewModel.appFontFamily
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextField(
+                        value = newAiAssistantInputText,
+                        onValueChange = { newAiAssistantInputText = it },
+                        placeholder = {
+                            Text(
+                                text = "اسأل عن فني، مدينة، أسعار فحص...",
+                                color = Color.LightGray,
+                                fontSize = 11.sp,
+                                fontFamily = viewModel.appFontFamily
+                            )
+                        },
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontFamily = viewModel.appFontFamily
+                        ),
+                        modifier = Modifier.weight(1f),
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF1A2235),
+                            unfocusedContainerColor = Color(0xFF1A2235),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    
+                    IconButton(
+                        onClick = {
+                            if (newAiAssistantInputText.isNotEmpty()) {
+                                val userQuery = newAiAssistantInputText
+                                val userMsg = ChatMessage(
+                                    chatId = "ai",
+                                    senderName = "العميل",
+                                    senderRole = "user",
+                                    messageText = userQuery
+                                )
+                                aiAssistantMessages = aiAssistantMessages + userMsg
+                                newAiAssistantInputText = ""
+
+                                coroutineScope.launch {
+                                    delay(1000)
+                                    val queryNormalized = userQuery.lowercase()
+                                    val replyText = when {
+                                        queryNormalized.contains("سباك") || queryNormalized.contains("سباكة") -> {
+                                            "المستشار الذكي: ممتاز! لدينا نخبة من السباكين كأعمال السباكة المنزلية الفاخرة مثل الأخصائي 'أبو ماجد البريحي' في إب، وقيمة معاينته 4000 ريال يمني ومتاح للاتصال اللحظي."
+                                        }
+                                        queryNormalized.contains("صنعاء") -> {
+                                            "المستشار الذكي: نعم، في العاصمة صنعاء لدينا فنيون متميزون في عدة مجالات، فمثلاً 'المهندس وليد الصنعاني' هو عميد فنيي التبريد والتكييف، وهناك حدادون مهرة لمعالجة كافة الطلبات."
+                                        }
+                                        queryNormalized.contains("تكييف") || queryNormalized.contains("تبريد") || queryNormalized.contains("مكيف") -> {
+                                            "المستشار الذكي: للتدفئة والتكييف والبرودة، لدينا 'المهندس وليد الصنعاني' في صنعاء، عميد التبريد المركزي وخبير الفريون والغسيل لمعاينة دقيقة تبلغ 5000 ريال يمني."
+                                        }
+                                        queryNormalized.contains("كهربا") || queryNormalized.contains("طاقة") -> {
+                                            "المستشار الذكي: للكهرباء والطاقة الشمسية، الفني الموصى به بشدة هو 'أحمد جلال الحديدي' بمدينة الحديدة، ويمتاز بالتمديدات الآمنة وصيانة المولدات بكلفة معاينة 3500 ريال يمني فقط."
+                                        }
+                                        queryNormalized.contains("أسعار") || queryNormalized.contains("سعر") || queryNormalized.contains("كلفة") || queryNormalized.contains("فلوس") -> {
+                                            "المستشار الذكي: يسير دليلنا على هيكل أسعار معياري عادل بالريال اليمني. تتراوح رسوم المعاينة في المنزل بين 3500 و 6000 ريال حسب التخصص، ويتم التفاهم على أجر الإصلاح الإجمالي بوضوح."
+                                        }
+                                        queryNormalized.contains("تسجيل") || queryNormalized.contains("انضمام") || queryNormalized.contains("كيف") -> {
+                                            "المستشار الذكي: للانضمام كمهني معتمد، ادخل لوحة المالك واقرأ شروطه ثم أرسل صورتك والضمانات الفنية عبر نافذة التسجيل المتكاملة ليوافق عليها المشرف."
+                                        }
+                                        queryNormalized.contains("نقاط") || queryNormalized.contains("ولاء") -> {
+                                            "المستشار الذكي: يمكنك كسب نقاط الولاء بتقييم الفنيين بعد إنجاز العمل (+15 نقطة)، وعند بلوغ 100 نقطة تستبدلها بخصم بقيمة 5000 ريال يمني!"
+                                        }
+                                        else -> {
+                                            "المستشار الذكي: تساؤلك محط اهتمامي البالغ في دليلي الفني لخدمات اليمن. يتوفر لدينا سباكون، كهربائيون، نجارون، أخصائيو تبريد وحدادون بكافة المحافظات مجاناً وتواصل مباشر باتصال أو واتساب بنقرة واحدة!"
+                                        }
+                                    }
+                                    val aiMsg = ChatMessage(
+                                        chatId = "ai",
+                                        senderName = "مساعد دليلي الذكي 🤖",
+                                        senderRole = "admin",
+                                        messageText = replyText
+                                    )
+                                    aiAssistantMessages = aiAssistantMessages + aiMsg
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .size(46.dp)
+                            .background(viewModel.appPrimaryColor, RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = "Send AI",
+                            tint = Color.Black,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("إغلاق المحادثة", color = Color.White, fontFamily = viewModel.appFontFamily)
+            }
+        },
+        containerColor = Color(0xFF111E2E)
+    )
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)

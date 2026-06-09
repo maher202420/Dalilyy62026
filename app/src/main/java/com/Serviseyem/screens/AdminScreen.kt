@@ -2159,6 +2159,11 @@ fun AdminSectionsScrollTab(viewModel: AppViewModel, context: android.content.Con
 fun AdminFloatingIconsControllerTab(viewModel: AppViewModel, context: android.content.Context) {
     var sizeSliderVal by remember { mutableFloatStateOf(viewModel.chatSettingsIconSize) }
     var assistantSizeSliderVal by remember { mutableFloatStateOf(viewModel.aiAssistantIconSize) }
+    
+    var chatOffsetX by remember { mutableFloatStateOf(viewModel.chatSettingsOffsetX) }
+    var chatOffsetY by remember { mutableFloatStateOf(viewModel.chatSettingsOffsetY) }
+    var aiOffsetX by remember { mutableFloatStateOf(viewModel.aiAssistantOffsetX) }
+    var aiOffsetY by remember { mutableFloatStateOf(viewModel.aiAssistantOffsetY) }
 
     val iconColors = listOf(
         "#0D1B2A" to "الأسود الأنيق",
@@ -2174,23 +2179,24 @@ fun AdminFloatingIconsControllerTab(viewModel: AppViewModel, context: android.co
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("⚙️ بوابة إدارة كفاءة وحجم الأيقونات التفاعلية الشائعة:", color = viewModel.appPrimaryColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text("⚙️ لوحة تكييف وتموضع الأيقونات التفاعلية المعيارية:", color = viewModel.appPrimaryColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
 
+        // CARD 1: INSTANT CHAT WIDGET
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF14161A))
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text("الأيقونة الأولى: مظهر وحجم فقاعة الدردشة الفورية 💬", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("الأيقونة الأولى: مظهر، تموضع، وأيقونة دردشة العميل 💬", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
                 
-                // Toggle hide icon temporarily
+                // Toggle visibility
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("إظهار ميزة الأيقونة بالصفحة الرئيسية:", color = Color.LightGray, fontSize = 11.sp)
+                    Text("تنشيط وإظهار أيقونة الدردشة:", color = Color.LightGray, fontSize = 11.sp)
                     Switch(
                         checked = viewModel.chatSettingsVisible,
                         onCheckedChange = { viewModel.chatSettingsVisible = it },
@@ -2199,9 +2205,50 @@ fun AdminFloatingIconsControllerTab(viewModel: AppViewModel, context: android.co
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
-                // Change size in px / dp slider
+                // Toggle Alignment Side
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("تموضع الأيقونة (يمين الشاشة / يسار الشاشة):", color = Color.LightGray, fontSize = 11.sp)
+                    Button(
+                        onClick = { viewModel.chatSettingsAlignmentIsRight = !viewModel.chatSettingsAlignmentIsRight },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (viewModel.chatSettingsAlignmentIsRight) viewModel.appPrimaryColor else Color.DarkGray),
+                        shape = RoundedCornerShape(4.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(if (viewModel.chatSettingsAlignmentIsRight) "ليمين الشاشة" else "ليسار الشاشة", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                // Emoji Icon Selection
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("تعديل رمز الأيقونة (إيموجي مخصص):", color = Color.LightGray, fontSize = 11.sp)
+                    TextField(
+                        value = viewModel.chatSettingsIconEmoji,
+                        onValueChange = { viewModel.chatSettingsIconEmoji = it },
+                        modifier = Modifier.width(60.dp),
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF2E3138),
+                            unfocusedContainerColor = Color(0xFF2E3138)
+                        ),
+                        singleLine = true
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                // Change size
                 Text(
-                    text = "تعديل قطر القطر والحجم للأيقونة: ${sizeSliderVal.toInt()} بكسل/DP",
+                    text = "حجم القطر للأيقونة: ${sizeSliderVal.toInt()} بكسل/DP",
                     color = Color.LightGray,
                     fontSize = 11.sp
                 )
@@ -2212,6 +2259,32 @@ fun AdminFloatingIconsControllerTab(viewModel: AppViewModel, context: android.co
                         viewModel.chatSettingsIconSize = it
                     },
                     valueRange = 40f..100f,
+                    colors = SliderDefaults.colors(viewModel.appPrimaryColor, activeTrackColor = viewModel.appPrimaryColor)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+                // Change Offset X
+                Text(text = "إزاحة أفقية (X-Offset): ${chatOffsetX.toInt()} dps", color = Color.LightGray, fontSize = 11.sp)
+                Slider(
+                    value = chatOffsetX,
+                    onValueChange = {
+                        chatOffsetX = it
+                        viewModel.chatSettingsOffsetX = it
+                    },
+                    valueRange = -150f..150f,
+                    colors = SliderDefaults.colors(viewModel.appPrimaryColor, activeTrackColor = viewModel.appPrimaryColor)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+                // Change Offset Y
+                Text(text = "إزاحة عمودية (Y-Offset): ${chatOffsetY.toInt()} dps", color = Color.LightGray, fontSize = 11.sp)
+                Slider(
+                    value = chatOffsetY,
+                    onValueChange = {
+                        chatOffsetY = it
+                        viewModel.chatSettingsOffsetY = it
+                    },
+                    valueRange = -100f..400f,
                     colors = SliderDefaults.colors(viewModel.appPrimaryColor, activeTrackColor = viewModel.appPrimaryColor)
                 )
 
@@ -2240,29 +2313,31 @@ fun AdminFloatingIconsControllerTab(viewModel: AppViewModel, context: android.co
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                // Hard delete icon bubble from app
+                // Hard delete/Hide toggle
                 Button(
                     onClick = {
-                        viewModel.chatSettingsDeleted = true
-                        viewModel.addActivityLog("تم محو وحذف ميزة فقاعة الدردشة الفورية بالكامل من التطبيق الرئيسي.")
-                        Toast.makeText(context, "🚫 تم حذف ميزة فقاعة الدردشة الفورية من التطبيق بالكامل ولن يعاد برمجتها!", Toast.LENGTH_LONG).show()
+                        viewModel.chatSettingsDeleted = !viewModel.chatSettingsDeleted
+                        viewModel.addActivityLog("تم تبديل حالة حذف/استعادة ميزة فقاعة الدردشة الفورية.")
+                        Toast.makeText(context, if (viewModel.chatSettingsDeleted) "🚫 تم إخفاء وحذف ميزة الدردشة بنجاح!" else "✅ تم استعادة ميزة الدردشة بنجاح!", Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (viewModel.chatSettingsDeleted) Color.Gray else Color.Red),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("حذف فقاعة الدردشة الفورية نهائياً ⛔", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(if (viewModel.chatSettingsDeleted) "استعادة أيقونة الدردشة الفورية ♻️" else "حذف أيقونة الدردشة الفورية تماماً ⛔", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
+        // CARD 2: AI ASSISTANT WIDGET
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF14161A))
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text("الأيقونة الثانية: مظهر وحجم المساعد الذكي AI 🤖", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("الأيقونة الثانية: مظهر، تموضع، وأيقونة المساعد الذكي AI 🤖", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
 
+                // Toggle visibility
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -2277,6 +2352,48 @@ fun AdminFloatingIconsControllerTab(viewModel: AppViewModel, context: android.co
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
+                // Toggle Alignment Side
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("تموضع المساعد (يمين الشاشة / يسار الشاشة):", color = Color.LightGray, fontSize = 11.sp)
+                    Button(
+                        onClick = { viewModel.aiAssistantAlignmentIsRight = !viewModel.aiAssistantAlignmentIsRight },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (viewModel.aiAssistantAlignmentIsRight) viewModel.appPrimaryColor else Color.DarkGray),
+                        shape = RoundedCornerShape(4.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(if (viewModel.aiAssistantAlignmentIsRight) "ليمين الشاشة" else "ليسار الشاشة", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                // Emoji Icon Selection
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("تعديل رمز مساعدك (إيموجي مخصص):", color = Color.LightGray, fontSize = 11.sp)
+                    TextField(
+                        value = viewModel.aiAssistantIconEmoji,
+                        onValueChange = { viewModel.aiAssistantIconEmoji = it },
+                        modifier = Modifier.width(60.dp),
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF2E3138),
+                            unfocusedContainerColor = Color(0xFF2E3138)
+                        ),
+                        singleLine = true
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                // Change size
                 Text(
                     text = "حجم أيقونة الذكاء الاصطناعي: ${assistantSizeSliderVal.toInt()} بكسل/DP",
                     color = Color.LightGray,
@@ -2293,7 +2410,34 @@ fun AdminFloatingIconsControllerTab(viewModel: AppViewModel, context: android.co
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Text("تلوين أيقونة محاكاة خوادم الذكاء الاصطناعي:", color = Color.LightGray, fontSize = 11.sp)
+                // Change Offset X
+                Text(text = "إزاحة أفقية (X-Offset): ${aiOffsetX.toInt()} dps", color = Color.LightGray, fontSize = 11.sp)
+                Slider(
+                    value = aiOffsetX,
+                    onValueChange = {
+                        aiOffsetX = it
+                        viewModel.aiAssistantOffsetX = it
+                    },
+                    valueRange = -150f..150f,
+                    colors = SliderDefaults.colors(viewModel.appPrimaryColor, activeTrackColor = viewModel.appPrimaryColor)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+                // Change Offset Y
+                Text(text = "إزاحة عمودية (Y-Offset): ${aiOffsetY.toInt()} dps", color = Color.LightGray, fontSize = 11.sp)
+                Slider(
+                    value = aiOffsetY,
+                    onValueChange = {
+                        aiOffsetY = it
+                        viewModel.aiAssistantOffsetY = it
+                    },
+                    valueRange = -100f..400f,
+                    colors = SliderDefaults.colors(viewModel.appPrimaryColor, activeTrackColor = viewModel.appPrimaryColor)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+                // Pick color for assistant bubble
+                Text("تلوين أيقونة مساعدك الذكي اليمني:", color = Color.LightGray, fontSize = 11.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("#111827" to "الأسود الفخم", "#4F46E5" to "البنفسجي الذكي", "#059669" to "الأخضر الزمردي").forEach { item ->
@@ -2313,6 +2457,20 @@ fun AdminFloatingIconsControllerTab(viewModel: AppViewModel, context: android.co
                             Text(item.second, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                         }
                     }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                // Hard delete/Hide toggle
+                Button(
+                    onClick = {
+                        viewModel.aiAssistantDeleted = !viewModel.aiAssistantDeleted
+                        viewModel.addActivityLog("تم تبديل حالة حذف/استعادة ميزة أيقونة المساعد الذكي.")
+                        Toast.makeText(context, if (viewModel.aiAssistantDeleted) "🚫 تم حذف المساعد الذكي بنجاح!" else "✅ تم استعادة المساعد الذكي بنجاح!", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = if (viewModel.aiAssistantDeleted) Color.Gray else Color.Red),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (viewModel.aiAssistantDeleted) "استعادة المساعد الذكي ♻️" else "حذف المساعد الذكي تماماً ⛔", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

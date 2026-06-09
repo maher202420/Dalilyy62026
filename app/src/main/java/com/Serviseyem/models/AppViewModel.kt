@@ -20,7 +20,7 @@ class AppViewModel : ViewModel() {
     val footerUpdateFlow = _footerUpdateFlow.asSharedFlow()
 
     // Realtime variables synced from Firestore
-    var footerText by mutableStateOf("wam2026")
+    var footerText by mutableStateOf("wam 2026")
     var footerFontSize by mutableStateOf(11f)
     var isFooterVisible by mutableStateOf(true)
 
@@ -93,7 +93,7 @@ class AppViewModel : ViewModel() {
             }
         }
         // Emit typical initial values
-        updateFooterTextFromFirestore("wam2026", 11f)
+        updateFooterTextFromFirestore("wam 2026", 11f)
     }
 
     // Central dynamic Lists
@@ -185,6 +185,10 @@ class AppViewModel : ViewModel() {
         }
     var chatSettingsVisible by mutableStateOf(true)
     var chatSettingsDeleted by mutableStateOf(false)
+    var chatSettingsIconEmoji by mutableStateOf("💬")
+    var chatSettingsOffsetX by mutableStateOf(0f)
+    var chatSettingsOffsetY by mutableStateOf(0f)
+    var chatSettingsAlignmentIsRight by mutableStateOf(false) // Default Left (bottom start)
 
     // AI Assistant widget settings
     var aiAssistantIconSize by mutableStateOf(60f)
@@ -196,6 +200,11 @@ class AppViewModel : ViewModel() {
             Color(0xFF111827)
         }
     var aiAssistantVisible by mutableStateOf(true)
+    var aiAssistantDeleted by mutableStateOf(false)
+    var aiAssistantIconEmoji by mutableStateOf("🤖")
+    var aiAssistantOffsetX by mutableStateOf(0f)
+    var aiAssistantOffsetY by mutableStateOf(0f)
+    var aiAssistantAlignmentIsRight by mutableStateOf(true) // Default Right (bottom end)
 
     // Permissions and overall app features toggled by admin
     var voiceSearchEnabled by mutableStateOf(true)
