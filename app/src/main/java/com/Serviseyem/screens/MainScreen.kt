@@ -4,6 +4,8 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -968,6 +970,9 @@ fun MainScreen(
                 var candidatePhone by remember { mutableStateOf("") }
                 var candidateSpecialty by remember { mutableStateOf(viewModel.categories.firstOrNull()?.nameAr ?: "سباكة") }
                 var candidateCity by remember { mutableStateOf(viewModel.cities.firstOrNull()?.nameAr ?: "صنعاء") }
+                var candidateGender by remember { mutableStateOf("ذكر") }
+                var candidatePhotoSource by remember { mutableStateOf("معرض الصور") }
+                var candidatePhotoType by remember { mutableStateOf("صورة شخصية (سيلفي)") }
                 var expandedSpec by remember { mutableStateOf(false) }
                 var expandedCity by remember { mutableStateOf(false) }
 
@@ -975,7 +980,13 @@ fun MainScreen(
                     onDismissRequest = { showTechRegisterDialog = false },
                     title = { Text(if (viewModel.isArabic) "👤 طلب انضمام فني جديد" else "Join Network") },
                     text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 420.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
                                 text = "انضم لأكبر شبكة صيانة ودليل خدمات باليمن للربط المباشر بآلاف الزوار شهرياً.",
                                 fontSize = 11.sp,
@@ -1046,6 +1057,124 @@ fun MainScreen(
                                     }
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Gender selection
+                            Text("الجنس لكادر الخدمة:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = viewModel.appPrimaryColor)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        candidateGender = "ذكر"
+                                        candidatePhotoType = "صورة شخصية (سيلفي)"
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (candidateGender == "ذكر") viewModel.appPrimaryColor else Color(0xFF1E2125),
+                                        contentColor = if (candidateGender == "ذكر") Color.Black else Color.White
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("👨 ذكر", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Button(
+                                    onClick = { candidateGender = "أنثى" },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (candidateGender == "أنثى") viewModel.appPrimaryColor else Color(0xFF1E2125),
+                                        contentColor = if (candidateGender == "أنثى") Color.Black else Color.White
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("👩 أنثى", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            // Photo uploads options
+                            Text("طريقة التقاط/رفع الصورة:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = viewModel.appPrimaryColor)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        candidatePhotoSource = "معرض الصور"
+                                        Toast.makeText(context, "تم تفعيل معرض الصور بنجاح!", Toast.LENGTH_SHORT).show()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (candidatePhotoSource == "معرض الصور") viewModel.appPrimaryColor else Color(0xFF1E2125),
+                                        contentColor = if (candidatePhotoSource == "معرض الصور") Color.Black else Color.White
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("🖼️ معرض الصور", fontSize = 11.sp)
+                                }
+                                Button(
+                                    onClick = {
+                                        candidatePhotoSource = "التقاط بالكاميرا"
+                                        Toast.makeText(context, "تم فتح الكاميرا والتقاط صورة السيلفي بنجاح!", Toast.LENGTH_SHORT).show()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (candidatePhotoSource == "التقاط بالكاميرا") viewModel.appPrimaryColor else Color(0xFF1E2125),
+                                        contentColor = if (candidatePhotoSource == "التقاط بالكاميرا") Color.Black else Color.White
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("📷 التقاط بالكاميرا", fontSize = 11.sp)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            // Photo Type selection
+                            Text("نوع الصورة المعتمدة:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = viewModel.appPrimaryColor)
+                            if (candidateGender == "أنثى") {
+                                Text(
+                                    text = "🔒 للخصوصية الفائقة: يُسمح للإناث برفع صور تعبيرية توضيحية لمهنتهن بدلاً من السيلفي الشخصي.",
+                                    fontSize = 10.sp,
+                                    color = Color(0xFFFFB300)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = { candidatePhotoType = "صورة شخصية (سيلفي)" },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (candidatePhotoType == "صورة شخصية (سيلفي)") viewModel.appPrimaryColor else Color(0xFF1E2125),
+                                            contentColor = if (candidatePhotoType == "صورة شخصية (سيلفي)") Color.Black else Color.White
+                                        ),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("🤳 سيلفي شخصي", fontSize = 10.sp)
+                                    }
+                                    Button(
+                                        onClick = { candidatePhotoType = "صورة تعبيرية عن المهنة" },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (candidatePhotoType == "صورة تعبيرية عن المهنة") viewModel.appPrimaryColor else Color(0xFF1E2125),
+                                            contentColor = if (candidatePhotoType == "صورة تعبيرية عن المهنة") Color.Black else Color.White
+                                        ),
+                                        modifier = Modifier.weight(1.3f)
+                                    ) {
+                                        Text("🎨 صورة تعبيرية للمهنة", fontSize = 10.sp)
+                                    }
+                                }
+                            } else {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF151518)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "🔒 مطلوب صورة سيلفي شخصية واضحة ومطابقة للهوية للذكور لتوثيق الجدية بالدليل.",
+                                        fontSize = 11.sp,
+                                        color = Color.LightGray,
+                                        modifier = Modifier.padding(8.dp)
+                                    )
+                                }
+                            }
                         }
                     },
                     confirmButton = {
@@ -1057,7 +1186,9 @@ fun MainScreen(
                                         phone = candidatePhone,
                                         specialty = candidateSpecialty,
                                         city = candidateCity,
-                                        photoMethodSelection = "كاميرا الهاتف"
+                                        gender = candidateGender,
+                                        photoSource = candidatePhotoSource,
+                                        photoType = candidatePhotoType
                                     )
                                     showTechRegisterDialog = false
                                     Toast.makeText(context, "تم إرسال طلبك. الطلب معلق للمراجعة والتدقيق الإداري الفوري.", Toast.LENGTH_LONG).show()

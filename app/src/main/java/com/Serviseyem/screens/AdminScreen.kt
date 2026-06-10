@@ -730,6 +730,7 @@ fun AdminProvidersSubSection(viewModel: AppViewModel) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(text = "اسم الفني: ${request.name}", fontWeight = FontWeight.Bold, color = Color.White)
                         Text(text = "الهاتف: ${request.phone} • المجال: ${request.specialty} • المدينة: ${request.city}", fontSize = 11.sp, color = Color.LightGray)
+                        Text(text = "الجنس: ${request.gender} • المصدر: ${request.photoSource} • نوع الصورة: ${request.photoType}", fontSize = 11.sp, color = Color(0xFF818CF8))
 
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),

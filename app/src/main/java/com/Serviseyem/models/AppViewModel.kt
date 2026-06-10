@@ -854,17 +854,22 @@ class AppViewModel : ViewModel() {
         phone: String,
         specialty: String,
         city: String,
-        photoMethodSelection: String
+        gender: String,
+        photoSource: String,
+        photoType: String
     ) {
         val newRequest = ServiceProvider(
             name = name,
             phone = phone,
             specialty = specialty,
             city = city,
-            status = "معلق"
+            status = "معلق",
+            gender = gender,
+            photoSource = photoSource,
+            photoType = photoType
         )
         firestore.collection("pending_providers").document(newRequest.id).set(newRequest)
-        addActivityLog("طلب تسجيل جديد وارد من: $name [$specialty] عبر $photoMethodSelection")
+        addActivityLog("طلب تسجيل جديد وارد من: $name ($gender) [$specialty] عبر $photoSource ($photoType)")
     }
 
     fun approveRequest(id: String) {
