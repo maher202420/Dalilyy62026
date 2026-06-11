@@ -14,6 +14,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -124,6 +126,11 @@ fun MainScreen(
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var selectedCity by remember { mutableStateOf<String?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+    var visibleProvidersLimit by remember { mutableStateOf(5) }
+
+    LaunchedEffect(selectedCategory, selectedCity, searchQuery) {
+        visibleProvidersLimit = 5
+    }
 
     // Control triggers for various interactive overlays
     var showLoginDialog by remember { mutableStateOf(false) }
@@ -137,6 +144,9 @@ fun MainScreen(
     // Guest User Identity config
     var guestUserNameInput by remember { mutableStateOf("غسان الصبري") }
     var userDisplayName by remember { mutableStateOf("غسان الصبري") }
+
+    // Bottom Navigation Item states
+    var currentBottomNavItem by remember { mutableStateOf("home") }
 
     // Backdoor gate click counters
     var logoClickCount by remember { mutableStateOf(0) }
@@ -254,23 +264,63 @@ fun MainScreen(
             )
         },
         bottomBar = {
-            if (viewModel.isFooterVisible) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .navigationBarsPadding()
-                        .padding(bottom = 12.dp, top = 12.dp, start = 16.dp, end = 16.dp),
-                    contentAlignment = Alignment.Center
+            Column {
+                if (viewModel.isFooterVisible) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .navigationBarsPadding()
+                            .padding(bottom = 6.dp, top = 6.dp, start = 16.dp, end = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = viewModel.footerText,
+                            fontSize = viewModel.footerFontSize.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = viewModel.appPrimaryColor,
+                    modifier = Modifier.testTag("app_bottom_navigation")
                 ) {
-                    Text(
-                        text = viewModel.footerText,
-                        fontSize = viewModel.footerFontSize.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
+                    NavigationBarItem(
+                        selected = currentBottomNavItem == "home",
+                        onClick = { currentBottomNavItem = "home" },
+                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                        label = { Text(if (viewModel.isArabic) "الرئيسية" else "Home", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        modifier = Modifier.testTag("nav_home_tab")
                     )
+                    NavigationBarItem(
+                        selected = currentBottomNavItem == "categories",
+                        onClick = { currentBottomNavItem = "categories" },
+                        icon = { Icon(Icons.Default.GridView, contentDescription = "Categories") },
+                        label = { Text(if (viewModel.isArabic) "الأقسام والمهن" else "Categories", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        modifier = Modifier.testTag("nav_categories_tab")
+                    )
+                    NavigationBarItem(
+                        selected = currentBottomNavItem == "profile",
+                        onClick = { currentBottomNavItem = "profile" },
+                        icon = { Icon(Icons.Default.AccountCircle, contentDescription = "My Account") },
+                        label = { Text(if (viewModel.isArabic) "الملف الشخصي" else "Profile", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        modifier = Modifier.testTag("nav_profile_tab")
+                    )
+                    
+                    if (viewModel.isMapEnabled) {
+                        NavigationBarItem(
+                            selected = currentBottomNavItem == "map",
+                            onClick = { currentBottomNavItem = "map" },
+                            icon = { Icon(Icons.Default.Map, contentDescription = "Yemen Map") },
+                            label = { Text(if (viewModel.isArabic) "خريطة اليمن" else "Yemen Map", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            modifier = Modifier.testTag("nav_map_tab")
+                        )
+                    }
                 }
             }
         },
@@ -324,14 +374,66 @@ fun MainScreen(
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Header brand greeting and loyalty points
-                item {
+            when (currentBottomNavItem) {
+                "home" -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Dynamic Top Search Bar (Configurable by admin)
+                        if (!viewModel.isSearchBarDeleted && viewModel.isSearchBarVisible) {
+                            item {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Search,
+                                            contentDescription = "Search icon",
+                                            tint = viewModel.appPrimaryColor,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        androidx.compose.foundation.text.BasicTextField(
+                                            value = searchQuery,
+                                            onValueChange = { searchQuery = it },
+                                            textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp),
+                                            modifier = Modifier.weight(1f).padding(vertical = 12.dp).testTag("top_search_input"),
+                                            decorationBox = { innerTextField ->
+                                                if (searchQuery.isEmpty()) {
+                                                    Text(
+                                                        text = if (viewModel.isArabic) viewModel.searchBarPlaceholderAr else viewModel.searchBarPlaceholderEn,
+                                                        color = Color.Gray,
+                                                        fontSize = 14.sp
+                                                    )
+                                                }
+                                                innerTextField()
+                                            }
+                                        )
+                                        if (searchQuery.isNotEmpty()) {
+                                            IconButton(onClick = { searchQuery = "" }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Clear,
+                                                    contentDescription = "Clear search",
+                                                    tint = Color.Gray,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Header brand greeting and loyalty points
+                        item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -479,23 +581,25 @@ fun MainScreen(
                 }
 
                 // Search Box and Statistics details
-                item {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("home_search_input"),
-                        label = { Text(if (viewModel.isArabic) "ابحث عن اسم، تخصص، صفة فنية..." else "Search by provider name, specialty...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear query")
+                if (!viewModel.isSearchBarDeleted && !viewModel.isSearchBarVisible) {
+                    item {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("home_search_input"),
+                            label = { Text(if (viewModel.isArabic) "ابحث عن اسم، تخصص، صفة فنية..." else "Search by provider name, specialty...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Clear query")
+                                    }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
 
                 // Filtered List display
@@ -530,7 +634,8 @@ fun MainScreen(
                         }
                     }
                 } else {
-                    items(filteredProviders) { provider ->
+                    val pagedProviders = filteredProviders.take(visibleProvidersLimit)
+                    items(pagedProviders) { provider ->
                         Card(
                             colors = CardDefaults.cardColors(
                                 containerColor = if (provider.isVip) Color(0xFF1F1C16) else Color(0xFF161619)
@@ -705,6 +810,37 @@ fun MainScreen(
                             }
                         }
                     }
+
+                    if (filteredProviders.size > visibleProvidersLimit) {
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = viewModel.appPrimaryColor.copy(alpha = 0.1f)),
+                                border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(viewModel.appPrimaryColor.copy(alpha = 0.4f))),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { visibleProvidersLimit += 5 }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "👇 تحميل المزيد من المهنيين (عرض $visibleProvidersLimit من أصل ${filteredProviders.size})",
+                                        color = viewModel.appPrimaryColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "تقليل استهلاك البيانات وتسريع التصفح التفاعلي للدليل العظيم",
+                                        color = Color.Gray,
+                                        fontSize = 9.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Global Contacts Block
@@ -727,6 +863,28 @@ fun MainScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+                }
+
+                "categories" -> {
+                    ExploreCategoriesLayout(viewModel) { cat ->
+                        selectedCategory = cat.nameAr
+                        currentBottomNavItem = "home"
+                    }
+                }
+
+                "profile" -> {
+                    UserProfileLayout(viewModel, userDisplayName, guestUserNameInput) { nextName ->
+                        userDisplayName = nextName
+                        guestUserNameInput = nextName
+                    }
+                }
+
+                "map" -> {
+                    InteractiveYemenMap(viewModel) { provider ->
+                        showProviderProfileDialog = provider
+                    }
                 }
             }
 
@@ -1418,6 +1576,7 @@ fun MainScreen(
                 var editBioText by remember { mutableStateOf(provider.biography) }
                 var editSkillsText by remember { mutableStateOf(provider.skills) }
                 var isEditingProfile by remember { mutableStateOf(false) }
+                var showBookingDialog by remember { mutableStateOf(false) }
 
                 AlertDialog(
                     onDismissRequest = { showProviderProfileDialog = null },
@@ -1458,23 +1617,44 @@ fun MainScreen(
                                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text("📞 الهاتف: ${provider.phone}", fontSize = 12.sp, color = Color.White)
-                                        Text("⭐ التقييم: ${provider.rating} (${provider.ratingsCount} تقييم)", fontSize = 11.sp, color = Color.LightGray)
-                                        Text("💵 المعاينة الاستكشافية: ${provider.baseFee} ر.ي", fontSize = 11.sp, color = viewModel.appPrimaryColor)
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text("📞 الهاتف: ${provider.phone}", fontSize = 12.sp, color = Color.White)
+                                            Text("⭐ التقييم: ${provider.rating} (${provider.ratingsCount} تقييم)", fontSize = 11.sp, color = Color.LightGray)
+                                            Text("💵 المعاينة الاستكشافية: ${provider.baseFee} ر.ي", fontSize = 11.sp, color = viewModel.appPrimaryColor)
+                                        }
+                                        if (provider.isVerified) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(Color(0xFF38BDF8).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                            ) {
+                                                Text("موثق 🛡️", color = Color(0xFF38BDF8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
                                     }
-                                    if (provider.isVerified) {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(Color(0xFF38BDF8).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
-                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    
+                                    Divider(color = Color.DarkGray, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+                                    
+                                    Text("💼 سنوات الحظوة والخبرة: ${provider.experienceYears} سنة", fontSize = 11.sp, color = Color.LightGray)
+                                    Text("📧 البريد الإلكتروني: ${provider.contactEmail.ifEmpty { "غير معلن" }}", fontSize = 11.sp, color = Color.LightGray)
+                                    
+                                    if (viewModel.showBookingsSection) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Button(
+                                            onClick = { showBookingDialog = true },
+                                            colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor, contentColor = Color.Black),
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentPadding = PaddingValues(vertical = 4.dp)
                                         ) {
-                                            Text("موثق 🛡️", color = Color(0xFF38BDF8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                            Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("📅 حجز موعد زيارة فنية الآن", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
@@ -1727,6 +1907,54 @@ fun MainScreen(
                         }
                     }
                 )
+
+                if (showBookingDialog) {
+                    var bookingName by remember { mutableStateOf(userDisplayName) }
+                    var bookingPhone by remember { mutableStateOf(guestUserNameInput) }
+                    var bookingDate by remember { mutableStateOf("") }
+                    var bookingTime by remember { mutableStateOf("") }
+
+                    AlertDialog(
+                        onDismissRequest = { showBookingDialog = false },
+                        title = { Text("📅 طلب حجز موعد مع المهني: ${provider.name}", fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("الرجاء إدخال بياناتك لحجز زيارة عمل فنية من قبل هذا المهني.", fontSize = 11.sp, color = Color.Gray)
+                                OutlinedTextField(value = bookingName, onValueChange = { bookingName = it }, label = { Text("الاسم الكامل للعميل") }, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(value = bookingPhone, onValueChange = { bookingPhone = it }, label = { Text("رقم الهاتف للتواصل للتأكيد") }, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(value = bookingDate, onValueChange = { bookingDate = it }, label = { Text("تاريخ الزيارة المطلوبة (مثال: 2026-06-21)") }, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(value = bookingTime, onValueChange = { bookingTime = it }, label = { Text("الساعة المفضلة (مثال: 4:00 عصراً)") }, modifier = Modifier.fillMaxWidth())
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    if (bookingName.isNotEmpty() && bookingPhone.isNotEmpty() && bookingDate.isNotEmpty() && bookingTime.isNotEmpty()) {
+                                        viewModel.requestBooking(
+                                            customerName = bookingName,
+                                            customerPhone = bookingPhone,
+                                            techName = provider.name,
+                                            date = bookingDate,
+                                            time = bookingTime
+                                        )
+                                        Toast.makeText(context, "تم إرسال طلب حجز الزيارة بنجاح وتحويل التنبيه للإدارة 🛠️", Toast.LENGTH_LONG).show()
+                                        showBookingDialog = false
+                                    } else {
+                                        Toast.makeText(context, "الرجاء كلاً من تعبئة كافة الحقول لحجز زيارة صحيحة", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor, contentColor = Color.Black)
+                            ) {
+                                Text("إرسال طلب الحجز")
+                            }
+                        },
+                        dismissButton = {
+                            Button(onClick = { showBookingDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)) {
+                                Text("إلغاء")
+                            }
+                        }
+                    )
+                }
             }
 
             // Dialog: AI Smart Assistant Chatbot
@@ -2048,4 +2276,754 @@ fun Text(
         color = color,
         modifier = modifier
     )
+}
+
+@Composable
+fun ExploreCategoriesLayout(
+    viewModel: AppViewModel,
+    onSelectCat: (Category) -> Unit
+) {
+    var selectedGroupTab by remember { mutableStateOf("professional") } // "professional", "service", "commercial"
+    var catSearchQuery by remember { mutableStateOf("") }
+
+    val filteredCats = viewModel.categories.filter { cat ->
+        cat.type == selectedGroupTab &&
+        cat.parentId == null && // main categories on first row
+        (catSearchQuery.isEmpty() || cat.nameAr.contains(catSearchQuery, ignoreCase = true) || cat.nameEn.contains(catSearchQuery, ignoreCase = true))
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = if (viewModel.isArabic) "📂 استكشاف الدليل الفاخر لأقسام اليمن" else "📂 Explore Yemen Business Directory",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = viewModel.appPrimaryColor
+        )
+
+        // Group selector tabs
+        TabRow(
+            selectedTabIndex = when (selectedGroupTab) {
+                "professional" -> 0
+                "service" -> 1
+                "commercial" -> 2
+                else -> 0
+            },
+            containerColor = Color.Transparent,
+            contentColor = viewModel.appPrimaryColor
+        ) {
+            listOf(
+                Triple("professional", if (viewModel.isArabic) "المهني والمهن 🛠️" else "Technical", Color(0xFF34D399)),
+                Triple("service", if (viewModel.isArabic) "الخدمي والعام 🩺" else "Services", Color(0xFF60A5FA)),
+                Triple("commercial", if (viewModel.isArabic) "المحلات والتجاري 🛒" else "Commercial", Color(0xFFFBBF24))
+            ).forEach { (type, label, color) ->
+                Tab(
+                    selected = selectedGroupTab == type,
+                    onClick = { selectedGroupTab = type },
+                    text = { Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                )
+            }
+        }
+
+        // Inner Search box
+        OutlinedTextField(
+            value = catSearchQuery,
+            onValueChange = { catSearchQuery = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(if (viewModel.isArabic) "البحث السريع عن التخصصات والأقسام..." else "Search specialties...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+        )
+
+        // List of categories and their subcategories
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            if (filteredCats.isEmpty()) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text(if (viewModel.isArabic) "لا توجد أقسام متطابقة في هذا التبويب حالياً" else "No matching sections found.", color = Color.Gray)
+                    }
+                }
+            } else {
+                items(filteredCats) { mainCat ->
+                    // Find subcategories of this main category
+                    val subCats = viewModel.categories.filter { it.parentId == mainCat.id }
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelectCat(mainCat) }
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Icon/Emoji or Image
+                                if (!mainCat.imageUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = mainCat.imageUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(viewModel.appPrimaryColor.copy(alpha = 0.15f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(mainCat.iconEmoji, fontSize = 22.sp)
+                                    }
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (viewModel.isArabic) mainCat.nameAr else mainCat.nameEn,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = viewModel.appPrimaryColor
+                                    )
+                                    if (mainCat.description.isNotEmpty()) {
+                                        Text(
+                                            text = mainCat.description,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+
+                                Icon(
+                                    imageVector = Icons.Default.ArrowForward,
+                                    contentDescription = "Select",
+                                    tint = viewModel.appPrimaryColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+
+                            // Subcategories list if present
+                            if (subCats.isNotEmpty()) {
+                                Divider(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                                Text(
+                                    text = if (viewModel.isArabic) "📂 الأقسام والمسارات الفرعية التابعة لمحافظة اليمن:" else "Sub-categories:",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = viewModel.appSecondaryColor
+                                )
+
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                ) {
+                                    items(subCats) { sub ->
+                                        SuggestionChip(
+                                            onClick = { onSelectCat(sub) },
+                                            label = { Text(if (viewModel.isArabic) "${sub.iconEmoji} ${sub.nameAr}" else "${sub.iconEmoji} ${sub.nameEn}", fontSize = 10.sp) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UserProfileLayout(
+    viewModel: AppViewModel,
+    userDisplayName: String,
+    guestUserNameInput: String,
+    onUpdateName: (String) -> Unit
+) {
+    var editingName by remember { mutableStateOf(guestUserNameInput) }
+    var isEditingName by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = if (viewModel.isArabic) "👤 ملف الزبون والمستخدم الحالي" else "👤 User Profile & Workspace",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = viewModel.appPrimaryColor,
+            modifier = Modifier.align(Alignment.Start)
+        )
+
+        // Profile Avatar Card
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Large Avatar Emoji
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(viewModel.appPrimaryColor.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("👤", fontSize = 42.sp)
+                }
+
+                if (isEditingName) {
+                    OutlinedTextField(
+                        value = editingName,
+                        onValueChange = { editingName = it },
+                        label = { Text(if (viewModel.isArabic) "تعديل اسمك المعروض بالدليل" else "Display Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Button(
+                        onClick = {
+                            if (editingName.isNotBlank()) {
+                                onUpdateName(editingName)
+                                isEditingName = false
+                                Toast.makeText(context, "تم حفظ الاسم الجديد وحقنه بالدليل!", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor, contentColor = Color.Black),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("حفظ وتعديل")
+                    }
+                } else {
+                    Text(
+                        text = userDisplayName,
+                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "عضو معتمد ببطاقة رقم: WAM-${userDisplayName.hashCode().toString().takeLast(6)}",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                    Button(
+                        onClick = { isEditingName = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor.copy(alpha = 0.2f), contentColor = viewModel.appPrimaryColor)
+                    ) {
+                        Text(if (viewModel.isArabic) "✏️ تعديل الاسم المعروض" else "Edit Name")
+                    }
+                }
+            }
+        }
+
+        // Loyalty Card Reward Section inside Profile!
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161619)),
+            border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(viewModel.appPrimaryColor.copy(alpha = 0.3f))),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("🎁", fontSize = 24.sp)
+                    Text(
+                        text = if (viewModel.isArabic) "رصيد نقاط الولاء وعون التيسير" else "Yemen Loyalty System",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = viewModel.appPrimaryColor
+                    )
+                }
+                
+                Divider(color = Color.DarkGray, thickness = 0.5.dp)
+
+                Text(
+                    text = String.format(viewModel.loyaltyCardTitle, viewModel.userLoyaltyPoints),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = Color.White
+                )
+
+                Text(
+                    text = viewModel.loyaltyCardText,
+                    fontSize = 11.sp,
+                    color = Color.LightGray
+                )
+
+                Button(
+                    onClick = {
+                        if (viewModel.userLoyaltyPoints >= 100) {
+                            viewModel.userLoyaltyPoints -= 100
+                            Toast.makeText(context, if (viewModel.isArabic) "🎟️ مبروك! تم إسترداد كود خصم فوري: WAM-REWARD-5000" else "Reward Code Redeemed!", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, if (viewModel.isArabic) "عذراً، تحتاج 100 نقطة على الأقل للاستبدال!" else "Insufficient points!", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor, contentColor = Color.Black),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (viewModel.isArabic) "استرداد خصم 5,000 ريال يمني" else "Redeem 5k YER Discount", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        // Bookings section
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111113)),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = if (viewModel.isArabic) "📅 سجل الزيارات وجدول الحجوزات الفنية" else "📅 Tech Service Bookings",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = viewModel.appPrimaryColor
+                )
+
+                val userBookings = viewModel.bookings.filter { it.customerName == userDisplayName }
+                if (userBookings.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (viewModel.isArabic) "لم تقم بجدولة أي حجوزات فنية مع دليل خدمات اليمن حتى الآن" else "No active scheduled service bookings.",
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    userBookings.forEach { booking ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1E)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(booking.techName, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
+                                    Text(
+                                        text = booking.status,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (booking.status == "مقبول") Color.Green else Color.Yellow,
+                                        modifier = Modifier
+                                            .background(Color.Black, RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Text("تاريخ الزيارة: ${booking.date} • وقت: ${booking.time}", fontSize = 10.sp, color = Color.LightGray, modifier = Modifier.padding(top = 4.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InteractiveYemenMap(
+    viewModel: AppViewModel,
+    onSelectProvider: (ServiceProvider) -> Unit
+) {
+    var userLat by remember { mutableStateOf(15.35) }
+    var userLng by remember { mutableStateOf(44.20) }
+
+    fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371.0 // Earth's radius in kilometers
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return r * c
+    }
+
+    val yemenCities = listOf(
+        Triple("صنعاء 🏙️", 15.35, 44.20),
+        Triple("عدن 🌊", 12.78, 45.01),
+        Triple("تعز 🏔️", 13.58, 44.02),
+        Triple("الحديدة ⚓", 14.80, 42.95),
+        Triple("المكلا 🏖️", 14.54, 49.12),
+        Triple("إب 🌳", 13.97, 44.18)
+    )
+
+    val activeProvidersOnMap = viewModel.providers.filter { it.status == "مقبول" }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "🗺️ خريطة اليمن التفاعلية الجغرافية بدقة عالية",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "نظام تحديد المواقع المتكامل وحساب المسافة المباشرة لأقرب الفنيين والمهنيين عن نقطة إقامتك الحالية بالجمهورية اليمنية.",
+                        fontSize = 11.sp,
+                        color = Color.LightGray
+                    )
+                }
+            }
+        }
+
+        // Custom Canvas Interactive Map vector view
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF111114)),
+                border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Color.DarkGray)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(activeProvidersOnMap) {
+                                detectTapGestures { offset ->
+                                    val scopeSize = this.size
+                                    val percentX = offset.x / scopeSize.width.toFloat()
+                                    val percentY = offset.y / scopeSize.height.toFloat()
+                                    val tappedLng = 42.0 + (percentX * 12.0)
+                                    val tappedLat = 18.0 - (percentY * 6.0)
+
+                                    // Check if clicked near an active provider pin!
+                                    var clickedProvider: ServiceProvider? = null
+                                    var minDistancePx = 50f // 50 pixels radius
+                                    
+                                    activeProvidersOnMap.forEach { provider ->
+                                        val pX = scopeSize.width * ((provider.longitude - 42.0) / 12.0).toFloat()
+                                        val pY = scopeSize.height * ((18.0 - provider.latitude) / 6.0).toFloat()
+                                        val dx = offset.x - pX
+                                        val dy = offset.y - pY
+                                        val dist = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                                        if (dist < minDistancePx) {
+                                            minDistancePx = dist
+                                            clickedProvider = provider
+                                        }
+                                    }
+
+                                    if (clickedProvider != null) {
+                                        onSelectProvider(clickedProvider!!)
+                                    } else {
+                                        userLat = Math.round(tappedLat * 100.0) / 100.0
+                                        userLng = Math.round(tappedLng * 100.0) / 100.0
+                                    }
+                                }
+                            }
+                    ) {
+                        val canvasWidth = size.width
+                        val canvasHeight = size.height
+
+                        // Draw coordinate grids
+                        for (i in 1..4) {
+                            val ratio = i / 5f
+                            drawLine(
+                                color = Color.DarkGray.copy(alpha = 0.3f),
+                                start = androidx.compose.ui.geometry.Offset(0f, canvasHeight * ratio),
+                                end = androidx.compose.ui.geometry.Offset(canvasWidth, canvasHeight * ratio),
+                                strokeWidth = 1f
+                            )
+                            drawLine(
+                                color = Color.DarkGray.copy(alpha = 0.3f),
+                                start = androidx.compose.ui.geometry.Offset(canvasWidth * ratio, 0f),
+                                end = androidx.compose.ui.geometry.Offset(canvasWidth * ratio, canvasHeight),
+                                strokeWidth = 1f
+                            )
+                        }
+
+                        // Plot Yemen geographic regions / borders simulated
+                        val path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(canvasWidth * 0.05f, canvasHeight * 0.45f) // Hodeidah
+                            quadraticBezierTo(canvasWidth * 0.15f, canvasHeight * 0.75f, canvasWidth * 0.22f, canvasHeight * 0.85f) // Bab Al-Mandab
+                            lineTo(canvasWidth * 0.30f, canvasHeight * 0.84f) // Aden
+                            quadraticBezierTo(canvasWidth * 0.60f, canvasHeight * 0.70f, canvasWidth * 0.95f, canvasHeight * 0.50f) // Al Mahrah
+                            lineTo(canvasWidth * 0.90f, canvasHeight * 0.10f) // Empty Quarter Border
+                            quadraticBezierTo(canvasWidth * 0.50f, canvasHeight * 0.15f, canvasWidth * 0.05f, canvasHeight * 0.30f)
+                            close()
+                        }
+                        drawPath(
+                            path = path,
+                            color = Color(0xFF1E293B).copy(alpha = 0.5f),
+                            style = androidx.compose.ui.graphics.drawscope.Fill
+                        )
+                        drawPath(
+                            path = path,
+                            color = Color.DarkGray,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f)
+                        )
+
+                        // Draw major cities
+                        yemenCities.forEach { (name, cityLat, cityLng) ->
+                            val xPercent = (cityLng - 42.0) / 12.0
+                            val yPercent = (18.0 - cityLat) / 6.0
+                            val cityX = canvasWidth * xPercent.toFloat()
+                            val cityY = canvasHeight * yPercent.toFloat()
+
+                            drawCircle(
+                                color = Color.Gray.copy(alpha = 0.6f),
+                                radius = 6f,
+                                center = androidx.compose.ui.geometry.Offset(cityX, cityY)
+                            )
+                        }
+
+                        // Plot Service Providers as Orange/Red Pins on Yemen
+                        activeProvidersOnMap.forEach { provider ->
+                            val providerLat = provider.latitude
+                            val providerLng = provider.longitude
+                            val xPercent = (providerLng - 42.0) / 12.0
+                            val yPercent = (18.0 - providerLat) / 6.0
+                            val pinX = canvasWidth * xPercent.toFloat()
+                            val pinY = canvasHeight * yPercent.toFloat()
+
+                            // Draw a visual marker
+                            drawCircle(
+                                color = if (provider.isVerified) Color(0xFF38BDF8) else Color(0xFFEA580C),
+                                radius = 8f,
+                                center = androidx.compose.ui.geometry.Offset(pinX, pinY)
+                            )
+                            // Outer ring
+                            drawCircle(
+                                color = (if (provider.isVerified) Color(0xFF38BDF8) else Color(0xFFEA580C)).copy(alpha = 0.3f),
+                                radius = 16f,
+                                center = androidx.compose.ui.geometry.Offset(pinX, pinY),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f)
+                            )
+                        }
+
+                        // Plot User's Pulsing blue pointer
+                        val userX = canvasWidth * ((userLng - 42.0) / 12.0).toFloat()
+                        val userY = canvasHeight * ((18.0 - userLat) / 6.0).toFloat()
+                        
+                        drawCircle(
+                            color = Color(0xFF3B82F6),
+                            radius = 12f,
+                            center = androidx.compose.ui.geometry.Offset(userX, userY)
+                        )
+                        drawCircle(
+                            color = Color(0xFF3B82F6).copy(alpha = 0.2f),
+                            radius = 24f,
+                            center = androidx.compose.ui.geometry.Offset(userX, userY)
+                        )
+                    }
+
+                    // Map overlay labels controls
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        Column {
+                            Text("دليل المفاتيح:", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(6.dp).background(Color(0xFF3B82F6), CircleShape))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("موقعك المقترح حالياً", fontSize = 8.sp, color = Color.LightGray)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                                Box(modifier = Modifier.size(6.dp).background(Color(0xFF38BDF8), CircleShape))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("مهني موثق معتمد 🛡️", fontSize = 8.sp, color = Color.LightGray)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                                Box(modifier = Modifier.size(6.dp).background(Color(0xFFEA580C), CircleShape))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("مهني عام نشط", fontSize = 8.sp, color = Color.LightGray)
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "💡 انقر على الخريطة لتغيير إحداثيات موقعك!",
+                        fontSize = 9.sp,
+                        color = Color.LightGray,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(8.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+
+        // Coordinates controls
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF161619)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("📍 التحكم الدقيق في إحداثيات موقعك الجغرافي:", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("خط العرض (Latitude): ${userLat}° N", fontSize = 10.sp, color = Color.Gray)
+                            Slider(
+                                value = userLat.toFloat(),
+                                onValueChange = { userLat = Math.round(it * 100.0) / 100.0 },
+                                valueRange = 12.0f..18.0f
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("خط الطول (Longitude): ${userLng}° E", fontSize = 10.sp, color = Color.Gray)
+                            Slider(
+                                value = userLng.toFloat(),
+                                onValueChange = { userLng = Math.round(it * 100.0) / 100.0 },
+                                valueRange = 42.0f..54.0f
+                            )
+                        }
+                    }
+
+                    Text("سريع: اختر المدينه لتثبيت موقعك فيها فوراً:", fontSize = 10.sp, color = Color.Gray)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(yemenCities) { (name, l1, l2) ->
+                            ElevatedButton(
+                                onClick = {
+                                    userLat = l1
+                                    userLng = l2
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                colors = ButtonDefaults.elevatedButtonColors(containerColor = Color(0xFF232328), contentColor = Color.White)
+                            ) {
+                                Text(name, fontSize = 9.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Text(
+                text = "👨‍🔧 مقدمو الخدمات الأقرب لعنوانك الجغرافي بالترتيب:",
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                fontSize = 12.sp
+            )
+        }
+
+        // Sort providers based on distance to the user current coordinates
+        val providersWithDistances = activeProvidersOnMap.map { provider ->
+            val dist = calculateDistance(userLat, userLng, provider.latitude, provider.longitude)
+            provider to dist
+        }.sortedBy { it.second }
+
+        if (providersWithDistances.isEmpty()) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "لا توجد حسابات مهنية نشطة حالياً لرسم مسافة القرب الجغرافي.",
+                        fontSize = 11.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+        } else {
+            items(providersWithDistances) { (provider, distance) ->
+                val roundedDistance = Math.round(distance * 10.0) / 10.0
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (provider.isVip) Color(0xFF1F1C16) else Color(0xFF161619)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(provider.name, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 13.sp)
+                                if (provider.isVerified) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("موثق 🛡️", color = Color(0xFF38BDF8), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Text("${provider.specialty} • ${provider.city}", fontSize = 10.sp, color = Color.Gray)
+                            Text("الهاتف: ${provider.phone}", fontSize = 10.sp, color = Color.LightGray)
+                            if (provider.contactEmail.isNotEmpty()) {
+                                Text("البريد المهني: ${provider.contactEmail}", fontSize = 9.sp, color = Color.Gray)
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Box(
+                                modifier = Modifier
+                                    .background(viewModel.appPrimaryColor.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "بُعد ${roundedDistance} كم",
+                                    color = viewModel.appPrimaryColor,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            TextButton(
+                                onClick = { onSelectProvider(provider) },
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text(
+                                    text = "عرض الملف والتفاصيل 🔍",
+                                    fontSize = 10.sp,
+                                    color = viewModel.appPrimaryColor,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

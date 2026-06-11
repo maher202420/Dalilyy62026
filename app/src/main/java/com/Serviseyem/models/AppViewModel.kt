@@ -414,6 +414,69 @@ class AppViewModel : ViewModel() {
             }
         }
 
+    // Search Bar settings controlled by Admin
+    private val _isSearchBarVisible = mutableStateOf(true)
+    var isSearchBarVisible: Boolean
+        get() = _isSearchBarVisible.value
+        set(value) {
+            if (_isSearchBarVisible.value != value) {
+                _isSearchBarVisible.value = value
+                updateSettingsField("isSearchBarVisible", value)
+            }
+        }
+
+    private val _isSearchBarDeleted = mutableStateOf(false)
+    var isSearchBarDeleted: Boolean
+        get() = _isSearchBarDeleted.value
+        set(value) {
+            if (_isSearchBarDeleted.value != value) {
+                _isSearchBarDeleted.value = value
+                updateSettingsField("isSearchBarDeleted", value)
+            }
+        }
+
+    private val _searchBarPlaceholderAr = mutableStateOf("بحث عن الأقسام أو المهنيين أو الخدمات...")
+    var searchBarPlaceholderAr: String
+        get() = _searchBarPlaceholderAr.value
+        set(value) {
+            if (_searchBarPlaceholderAr.value != value) {
+                _searchBarPlaceholderAr.value = value
+                updateSettingsField("searchBarPlaceholderAr", value)
+            }
+        }
+
+    private val _searchBarPlaceholderEn = mutableStateOf("Search categories, providers, or services...")
+    var searchBarPlaceholderEn: String
+        get() = _searchBarPlaceholderEn.value
+        set(value) {
+            if (_searchBarPlaceholderEn.value != value) {
+                _searchBarPlaceholderEn.value = value
+                updateSettingsField("searchBarPlaceholderEn", value)
+            }
+        }
+
+    private val _isMapEnabled = mutableStateOf(true)
+    var isMapEnabled: Boolean
+        get() = _isMapEnabled.value
+        set(value) {
+            if (_isMapEnabled.value != value) {
+                _isMapEnabled.value = value
+                updateSettingsField("isMapEnabled", value)
+            }
+        }
+
+    private val _bookingRoutingDestination = mutableStateOf("both")
+    var bookingRoutingDestination: String
+        get() = _bookingRoutingDestination.value
+        set(value) {
+            if (_bookingRoutingDestination.value != value) {
+                _bookingRoutingDestination.value = value
+                updateSettingsField("bookingRoutingDestination", value)
+            }
+        }
+
+    var notifications by mutableStateOf(listOf<AppNotification>())
+
     // Loyalty configuration parameter controlled dynamically
     var showLoyaltySection by mutableStateOf(false)
     var loyaltyCardText by mutableStateOf("استبدل خصم 100 نقطة فوري لتقليل كلفة الزيارات بمقدار 5000 ريال يمني!")
@@ -442,9 +505,11 @@ class AppViewModel : ViewModel() {
     var chatSessions by mutableStateOf(listOf<ChatSession>())
     var chatMessages by mutableStateOf(listOf<ChatMessage>())
     var chatParticipants by mutableStateOf(listOf<ChatParticipant>())
+    var colorPalettes by mutableStateOf(listOf<ColorPalette>())
 
     // Firestore listener registrations handles for teardown
     private var categoriesListener: ListenerRegistration? = null
+    private var colorPalettesListener: ListenerRegistration? = null
     private var serviceProvidersListener: ListenerRegistration? = null
     private var citiesListener: ListenerRegistration? = null
     private var bannersListener: ListenerRegistration? = null
@@ -457,6 +522,7 @@ class AppViewModel : ViewModel() {
     private var chatMessagesListener: ListenerRegistration? = null
     private var chatParticipantsListener: ListenerRegistration? = null
     private var settingsListener: ListenerRegistration? = null
+    private var notificationsListener: ListenerRegistration? = null
 
     init {
         initializeFirebaseDataIfNeeded()
@@ -558,6 +624,20 @@ class AppViewModel : ViewModel() {
             }
         }
 
+        firestore.collection("custom_colors").get().addOnSuccessListener { query ->
+            if (query.isEmpty) {
+                val defaults = listOf(
+                    ColorPalette(name = "الذهبي الكلاسيكي المظلم 👑", primaryColor = "#FFD700", secondaryColor = "#03DAC6", backgroundColor = "#0A0A0C", textColor = "#FFFFFF"),
+                    ColorPalette(name = "الأخضر اليمني المعتمد 🇾🇪", primaryColor = "#4CAF50", secondaryColor = "#FFC107", backgroundColor = "#0D1E10", textColor = "#FFFFFF"),
+                    ColorPalette(name = "الأزرق الملكي الفاخر 🔹", primaryColor = "#2196F3", secondaryColor = "#00E5FF", backgroundColor = "#0D1117", textColor = "#FFFFFF"),
+                    ColorPalette(name = "البنفسجي السيبراني الحديث 🔮", primaryColor = "#9C27B0", secondaryColor = "#00E5FF", backgroundColor = "#120024", textColor = "#FFFFFF")
+                )
+                for (p in defaults) {
+                    firestore.collection("custom_colors").document(p.id).set(p)
+                }
+            }
+        }
+
         firestore.collection("app_settings").document("master").get().addOnSuccessListener { doc ->
             if (!doc.exists()) {
                 val initSettings = hashMapOf(
@@ -652,6 +732,13 @@ class AppViewModel : ViewModel() {
                 }
             }
 
+        notificationsListener = firestore.collection("notifications")
+            .addSnapshotListener { snapshot, e ->
+                if (snapshot != null) {
+                    notifications = snapshot.toObjects(AppNotification::class.java)
+                }
+            }
+
         registrationTermsListener = firestore.collection("registration_terms")
             .addSnapshotListener { snapshot, e ->
                 if (snapshot != null) {
@@ -684,6 +771,13 @@ class AppViewModel : ViewModel() {
             .addSnapshotListener { snapshot, e ->
                 if (snapshot != null) {
                     chatParticipants = snapshot.toObjects(ChatParticipant::class.java)
+                }
+            }
+
+        colorPalettesListener = firestore.collection("custom_colors")
+            .addSnapshotListener { snapshot, e ->
+                if (snapshot != null) {
+                    colorPalettes = snapshot.toObjects(ColorPalette::class.java)
                 }
             }
 
@@ -720,6 +814,11 @@ class AppViewModel : ViewModel() {
                     _footerText.value = doc.getString("footerText") ?: "wam 2026"
                     _footerFontSize.value = doc.getDouble("footerFontSize")?.toFloat() ?: 11f
                     _isFooterVisible.value = doc.getBoolean("isFooterVisible") ?: true
+
+                    _isSearchBarVisible.value = doc.getBoolean("isSearchBarVisible") ?: true
+                    _isSearchBarDeleted.value = doc.getBoolean("isSearchBarDeleted") ?: false
+                    _searchBarPlaceholderAr.value = doc.getString("searchBarPlaceholderAr") ?: "بحث عن الأقسام أو المهنيين أو الخدمات..."
+                    _searchBarPlaceholderEn.value = doc.getString("searchBarPlaceholderEn") ?: "Search categories, providers, or services..."
 
                     val iconsOrder = doc.get("topBarIconsOrderList") as? List<*>
                     if (iconsOrder != null) {
@@ -879,6 +978,12 @@ class AppViewModel : ViewModel() {
             firestore.collection("service_providers").document(request.id).set(request)
             firestore.collection("pending_providers").document(id).delete()
             addActivityLog("قبول طلب الفني والاندماج الفوري للشبكة: ${request.name}")
+            sendAppNotification(
+                title = "تهانينا! تم قبول طلب انضمامك 🛡️",
+                body = "مرحباً ${request.name}، لقد تم قبول طلب انضمامك كمهني معتمد لمجال ${request.specialty} في ${request.city} بدليل خدمات اليمن.",
+                recipientName = request.name,
+                type = "registration_status"
+            )
         }
     }
 
@@ -887,6 +992,12 @@ class AppViewModel : ViewModel() {
         if (request != null) {
             firestore.collection("pending_providers").document(id).delete()
             addActivityLog("رفض وعزل طلب تسجيل الفني: ${request.name}")
+            sendAppNotification(
+                title = "تحديث بخصوص طلب التسجيل ⚠️",
+                body = "مرحباً ${request.name}، نأسف لإعلامك بأنه لم يتم قبول طلب تسجيلك في دليل خدمات اليمن للوظيفة الحالية.",
+                recipientName = request.name,
+                type = "registration_status"
+            )
         }
     }
 
@@ -927,15 +1038,97 @@ class AppViewModel : ViewModel() {
             techName = techName,
             date = date,
             time = time,
-            status = "معلق"
+            status = "قيد الانتظار"
         )
         firestore.collection("bookings").document(newBooking.id).set(newBooking)
+        
+        sendAppNotification(
+            title = "تم إرسال طلب الحجز بنجاح 📅",
+            body = "مرحباً ${customerName}، لقد تلقينا طلب حجزك الجديد للمهني (${techName}) بتاريخ ${date} ووقت ${time}. طلبك الآن قيد الانتظار لمعاينته والموافقة عليه.",
+            recipientName = customerName,
+            type = "booking_status"
+        )
         addActivityLog("حجز فني مجدول عبر الهاتف: لـ ${techName} باسم ${customerName}")
     }
 
     fun updateBookingStatus(id: String, status: String) {
         firestore.collection("bookings").document(id).update("status", status)
+        val booking = bookings.find { it.id == id }
+        if (booking != null) {
+            sendAppNotification(
+                title = "تحديث حالة الحجز الفني ⚙️",
+                body = "زبوننا العزيز ${booking.customerName}، تم تعديل حالة حجزك الفني مع المهني (${booking.techName}) ليصبح حالياً: [${status}]",
+                recipientName = booking.customerName,
+                type = "booking_status"
+            )
+        }
         addActivityLog("تعديل حالة الحجز الفني المعول: لـ $status")
+    }
+
+    fun sendAppNotification(title: String, body: String, recipientName: String? = null, type: String = "general") {
+        val notif = AppNotification(
+            title = title,
+            body = body,
+            recipientName = recipientName,
+            type = type
+        )
+        firestore.collection("notifications").document(notif.id).set(notif)
+        addActivityLog("إرسال إشعار [${type}]: ${title} -> لـ ${recipientName ?: "جميع المستخدمين"}")
+    }
+
+    fun deleteNotification(id: String) {
+        firestore.collection("notifications").document(id).delete()
+        addActivityLog("تم حذف إشعار رقابي من الدليل")
+    }
+
+    fun deleteBooking(id: String) {
+        firestore.collection("bookings").document(id).delete()
+        addActivityLog("تم حذف حجز فني من الدليل")
+    }
+
+    fun updateBookingFull(id: String, date: String, time: String, status: String) {
+        val updateMap = hashMapOf<String, Any>(
+            "date" to date,
+            "time" to time,
+            "status" to status
+        )
+        firestore.collection("bookings").document(id).update(updateMap)
+        addActivityLog("تعديل كامل لبيانات الحجز رقم: $id إلى ($date - $time - $status)")
+    }
+
+    fun updateProviderFullDetails(
+        id: String,
+        name: String,
+        phone: String,
+        specialty: String,
+        city: String,
+        biography: String,
+        baseFee: Int,
+        isVerified: Boolean,
+        isVip: Boolean,
+        experienceYears: Int,
+        contactEmail: String,
+        latitude: Double,
+        longitude: Double,
+        galleryUrls: List<String>
+    ) {
+        val updateMap = hashMapOf<String, Any>(
+            "name" to name,
+            "phone" to phone,
+            "specialty" to specialty,
+            "city" to city,
+            "biography" to biography,
+            "baseFee" to baseFee,
+            "isVerified" to isVerified,
+            "isVip" to isVip,
+            "experienceYears" to experienceYears,
+            "contactEmail" to contactEmail,
+            "latitude" to latitude,
+            "longitude" to longitude,
+            "galleryUrls" to galleryUrls
+        )
+        firestore.collection("service_providers").document(id).update(updateMap)
+        addActivityLog("تعديل كامل تفاصيل حساب المهني: $name")
     }
 
     fun addComplaint(techName: String, name: String, text: String) {
@@ -984,17 +1177,142 @@ class AppViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         categoriesListener?.remove()
+        colorPalettesListener?.remove()
         serviceProvidersListener?.remove()
         citiesListener?.remove()
         bannersListener?.remove()
         registrationRequestsListener?.remove()
         complaintsListener?.remove()
         bookingsListener?.remove()
+        notificationsListener?.remove()
         registrationTermsListener?.remove()
         adminsListener?.remove()
         chatSessionsListener?.remove()
         chatMessagesListener?.remove()
         chatParticipantsListener?.remove()
         settingsListener?.remove()
+    }
+
+    // Category CRUD operations for Admins
+    fun addCategory(nameAr: String, nameEn: String, desc: String, iconEmoji: String, type: String, parentId: String?, imageUrl: String?) {
+        val newCat = Category(
+            nameAr = nameAr,
+            nameEn = nameEn,
+            description = desc,
+            iconEmoji = iconEmoji,
+            type = type,
+            parentId = parentId,
+            imageUrl = imageUrl
+        )
+        firestore.collection("categories").document(newCat.id).set(newCat)
+        addActivityLog("إضافة قسم جديد بنجاح: $nameAr [طبيعة الخدمة: $type]")
+    }
+
+    fun updateCategory(id: String, nameAr: String, nameEn: String, desc: String, iconEmoji: String, type: String, parentId: String?, imageUrl: String?) {
+        val updateMap = hashMapOf<String, Any?>(
+            "nameAr" to nameAr,
+            "nameEn" to nameEn,
+            "description" to desc,
+            "iconEmoji" to iconEmoji,
+            "type" to type,
+            "parentId" to parentId,
+            "imageUrl" to imageUrl
+        )
+        firestore.collection("categories").document(id).update(updateMap)
+        addActivityLog("تعديل بيانات القسم بالدليل: $nameAr")
+    }
+
+    fun deleteCategory(id: String) {
+        firestore.collection("categories").document(id).delete()
+        addActivityLog("حذف القسم نهائياً من الشبكة: $id")
+    }
+
+    // Color Palette CRUD operations for Admins
+    fun addColorPalette(name: String, primary: String, secondary: String, background: String, text: String) {
+        val newPalette = ColorPalette(
+            name = name,
+            primaryColor = primary,
+            secondaryColor = secondary,
+            backgroundColor = background,
+            textColor = text
+        )
+        firestore.collection("custom_colors").document(newPalette.id).set(newPalette)
+        addActivityLog("إضافة لوحة ألوان مخصصة: $name")
+    }
+
+    fun updateColorPalette(id: String, name: String, primary: String, secondary: String, background: String, text: String) {
+        val updateMap = hashMapOf<String, Any>(
+            "name" to name,
+            "primaryColor" to primary,
+            "secondaryColor" to secondary,
+            "backgroundColor" to background,
+            "textColor" to text
+        )
+        firestore.collection("custom_colors").document(id).update(updateMap)
+        addActivityLog("تعديل لوحة الألوان: $name")
+    }
+
+    fun deleteColorPalette(id: String) {
+        firestore.collection("custom_colors").document(id).delete()
+        addActivityLog("مسح لوحة الألوان: $id")
+    }
+
+    fun activateColorPalette(palette: ColorPalette) {
+        firestore.collection("app_settings").document("master").update(
+            "appPrimaryColorStr", palette.primaryColor,
+            "appSecondaryColorStr", palette.secondaryColor,
+            "appBackgroundColorStr", palette.backgroundColor,
+            "appTextColorStr", palette.textColor
+        )
+        addActivityLog("تطبيق لوحة ألوان دليل خدمات اليمن لـ: ${palette.name}")
+    }
+
+    fun wipeAndRebuildFullDatabase(onComplete: (Boolean) -> Unit) {
+        val collections = listOf(
+            "categories", "service_providers", "cities", "banners",
+            "registration_terms", "admins", "pending_providers", "complaints",
+            "bookings", "notifications", "messages", "chats", "chat_participants",
+            "custom_colors", "app_settings"
+        )
+        
+        var completedCount = 0
+        var success = true
+        addActivityLog("بدء عملية تطهير ومسح كافة بيانات وملفات قواعد الدليل...")
+
+        for (colName in collections) {
+            firestore.collection(colName).get().addOnSuccessListener { query ->
+                if (query.isEmpty) {
+                    completedCount++
+                    if (completedCount == collections.size) {
+                        initializeFirebaseDataIfNeeded()
+                        addActivityLog("تم محو وبناء قواعد الدليل والملفات المرجعية بالكامل بنجاح 🇾🇪")
+                        onComplete(success)
+                    }
+                } else {
+                    val batch = firestore.batch()
+                    for (doc in query.documents) {
+                        batch.delete(doc.reference)
+                    }
+                    batch.commit().addOnCompleteListener { task ->
+                        completedCount++
+                        if (!task.isSuccessful) {
+                            success = false
+                        }
+                        if (completedCount == collections.size) {
+                            initializeFirebaseDataIfNeeded()
+                            addActivityLog("تم محو وبناء قواعد الدليل والملفات المرجعية بالكامل بنجاح 🇾🇪")
+                            onComplete(success)
+                        }
+                    }
+                }
+            }.addOnFailureListener {
+                completedCount++
+                success = false
+                if (completedCount == collections.size) {
+                    initializeFirebaseDataIfNeeded()
+                    onComplete(false)
+                }
+            }
+        }
     }
 }

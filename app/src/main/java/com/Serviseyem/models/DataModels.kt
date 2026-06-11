@@ -23,7 +23,11 @@ data class ServiceProvider(
     var skills: String = "صيانة عامة، تمديدات حديثة، إصلاح الأعطال الطارئة",
     var galleryUrls: List<String> = emptyList(),
     var galleryEnabled: Boolean = true,
-    var maxGalleryImages: Int = 10
+    var maxGalleryImages: Int = 10,
+    var experienceYears: Int = 3,
+    var contactEmail: String = "tech@serviseyem.com",
+    var latitude: Double = 15.3693,
+    var longitude: Double = 44.1910
 )
 
 data class Category(
@@ -33,7 +37,19 @@ data class Category(
     var description: String = "",
     var iconEmoji: String = "🔧",
     var isPinned: Boolean = false,
-    var isPublished: Boolean = true
+    var isPublished: Boolean = true,
+    var type: String = "professional", // "professional" (مهني), "service" (خدمي), "commercial" (تجاري)
+    var parentId: String? = null, // if it's a sub-category, points to parent Category's id. Otherwise null (main/أساسي).
+    var imageUrl: String? = null // custom image URL or icon URL
+)
+
+data class ColorPalette(
+    var id: String = UUID.randomUUID().toString(),
+    var name: String = "",
+    var primaryColor: String = "#FFD700",
+    var secondaryColor: String = "#03DAC6",
+    var backgroundColor: String = "#0A0A0C",
+    var textColor: String = "#FFFFFF"
 )
 
 data class City(
@@ -107,4 +123,14 @@ data class AdminAccount(
     var username: String = "",
     var passwordSecret: String = "",
     var privileges: List<String> = emptyList()
+)
+
+data class AppNotification(
+    var id: String = UUID.randomUUID().toString(),
+    var title: String = "",
+    var body: String = "",
+    var recipientName: String? = null, // null means public (عام للجميع)
+    var isRead: Boolean = false,
+    var timestamp: Long = System.currentTimeMillis(),
+    var type: String = "general" // "general", "booking_status", "registration_status"
 )
