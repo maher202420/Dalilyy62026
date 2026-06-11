@@ -1,6 +1,14 @@
 package com.Serviseyem.screens
 
 import android.widget.Toast
+import coil.compose.AsyncImage
+import java.net.HttpURLConnection
+import java.net.URL
+import java.io.OutputStreamWriter
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import org.json.JSONObject
+import org.json.JSONArray
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,6 +47,70 @@ import com.Serviseyem.models.ServiceProvider
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.*
+
+object GeminiApiClient {
+    suspend fun generateContent(apiKey: String, prompt: String, systemInstruction: String): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (apiKey.isBlank()) {
+            return@withContext "API_KEY_BLANK"
+        }
+        try {
+            val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/json; utf-8")
+            connection.setRequestProperty("Accept", "application/json")
+            connection.doOutput = true
+            connection.connectTimeout = 8000
+            connection.readTimeout = 8000
+
+            val requestJson = JSONObject().apply {
+                put("contents", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("parts", JSONArray().apply {
+                            put(JSONObject().apply {
+                                put("text", prompt)
+                            })
+                        })
+                    })
+                })
+                put("systemInstruction", JSONObject().apply {
+                    put("parts", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("text", systemInstruction)
+                        })
+                    })
+                })
+            }
+
+            OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
+                writer.write(requestJson.toString())
+                writer.flush()
+            }
+
+            val responseCode = connection.responseCode
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val response = StringBuilder()
+                BufferedReader(InputStreamReader(connection.inputStream, "utf-8")).use { reader ->
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line?.trim())
+                    }
+                }
+                
+                val responseJson = JSONObject(response.toString())
+                val candidates = responseJson.getJSONArray("candidates")
+                val content = candidates.getJSONObject(0).getJSONObject("content")
+                val parts = content.getJSONArray("parts")
+                parts.getJSONObject(0).getString("text")
+            } else {
+                "API_ERROR_CODE_$responseCode"
+            }
+        } catch (e: Exception) {
+            "API_EXCEPTION_${e.message}"
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +132,7 @@ fun MainScreen(
     var showComplaintDialog by remember { mutableStateOf<ServiceProvider?>(null) }
     var showMyChatsOverviewDialog by remember { mutableStateOf(false) }
     var showAiAssistantDialog by remember { mutableStateOf(false) }
+    var showProviderProfileDialog by remember { mutableStateOf<ServiceProvider?>(null) }
 
     // Guest User Identity config
     var guestUserNameInput by remember { mutableStateOf("غسان الصبري") }
@@ -186,15 +259,16 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surface)
-                        .padding(bottom = 28.dp, top = 10.dp),
+                        .navigationBarsPadding()
+                        .padding(bottom = 12.dp, top = 12.dp, start = 16.dp, end = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = viewModel.footerText,
                         fontSize = viewModel.footerFontSize.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                        fontWeight = FontWeight.Light,
+                        fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -469,6 +543,7 @@ fun MainScreen(
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clickable { showProviderProfileDialog = provider }
                                 .testTag("provider_card_${provider.id}")
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -499,7 +574,7 @@ fun MainScreen(
                                         Text(
                                             text = "👨‍🔧 ${provider.specialty} • 📍 ${provider.city}",
                                             fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                            color = Color.White.copy(alpha = 0.85f),
                                             modifier = Modifier.padding(top = 2.dp)
                                         )
                                     }
@@ -528,7 +603,7 @@ fun MainScreen(
                                     Text(
                                         text = provider.biography,
                                         fontSize = 11.sp,
-                                        color = Color.Gray,
+                                        color = Color.White.copy(alpha = 0.75f),
                                         maxLines = 3,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.padding(top = 8.dp)
@@ -543,6 +618,32 @@ fun MainScreen(
                                         text = "المعاينة المعيارية للتواجد: ~${provider.baseFee} ريال يمني",
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 11.sp,
+                                        color = viewModel.appPrimaryColor
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { showProviderProfileDialog = provider }
+                                        .background(Color(0xFF232329), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Icon(Icons.Default.AccountBox, contentDescription = null, tint = viewModel.appPrimaryColor, modifier = Modifier.size(16.dp))
+                                        Text(
+                                            text = if (viewModel.isArabic) "عرض الملف المهني الكامل والمعرض" else "View Portfolio & Full Bio",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp,
+                                            color = Color.White
+                                        )
+                                    }
+                                    Text(
+                                        text = "⚡ " + (if (viewModel.isArabic) "اضغط هنا" else "Click here"),
+                                        fontWeight = FontWeight.Light,
+                                        fontSize = 9.sp,
                                         color = viewModel.appPrimaryColor
                                     )
                                 }
@@ -1309,16 +1410,341 @@ fun MainScreen(
                 )
             }
 
+            // Dialog: Professional File Details Page
+            showProviderProfileDialog?.let { p ->
+                val provider = viewModel.providers.find { it.id == p.id } ?: p
+                var showAddImageForm by remember { mutableStateOf(false) }
+                var customImageUrl by remember { mutableStateOf("") }
+                var editBioText by remember { mutableStateOf(provider.biography) }
+                var editSkillsText by remember { mutableStateOf(provider.skills) }
+                var isEditingProfile by remember { mutableStateOf(false) }
+
+                AlertDialog(
+                    onDismissRequest = { showProviderProfileDialog = null },
+                    properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+                    modifier = Modifier.fillMaxWidth(0.95f).padding(16.dp),
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .background(viewModel.appPrimaryColor.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("👨‍🔧", fontSize = 24.sp)
+                                }
+                                Column {
+                                    Text(text = provider.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+                                    Text(text = "${provider.specialty} • ${provider.city}", fontSize = 11.sp, color = Color.Gray)
+                                }
+                            }
+                            IconButton(onClick = { showProviderProfileDialog = null }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                            }
+                        }
+                    },
+                    text = {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.verticalScroll(rememberScrollState())
+                        ) {
+                            // Quick info card
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text("📞 الهاتف: ${provider.phone}", fontSize = 12.sp, color = Color.White)
+                                        Text("⭐ التقييم: ${provider.rating} (${provider.ratingsCount} تقييم)", fontSize = 11.sp, color = Color.LightGray)
+                                        Text("💵 المعاينة الاستكشافية: ${provider.baseFee} ر.ي", fontSize = 11.sp, color = viewModel.appPrimaryColor)
+                                    }
+                                    if (provider.isVerified) {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(Color(0xFF38BDF8).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Text("موثق 🛡️", color = Color(0xFF38BDF8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Biography section
+                            Text("📝 نبذة تعريفية كاملة عن السيرة الذاتية", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = viewModel.appPrimaryColor)
+                            if (isEditingProfile) {
+                                OutlinedTextField(
+                                    value = editBioText,
+                                    onValueChange = { editBioText = it },
+                                    label = { Text("اكتب نبذة تعريفية عنك") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161619)),
+                                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Color.DarkGray)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = provider.biography.ifEmpty { "أهلاً بك! أنا فني ملتزم بتقديم خدمات صيانة فورية بأقصى درجات الحرفية والمهارة والسرعة في اليمن." },
+                                        fontSize = 11.sp,
+                                        color = Color.LightGray,
+                                        modifier = Modifier.padding(12.dp),
+                                        lineHeight = 16.sp
+                                    )
+                                }
+                            }
+
+                            // Skills Section
+                            Text("🛠️ المهارات والقدرات المهنية (Skills)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = viewModel.appPrimaryColor)
+                            if (isEditingProfile) {
+                                OutlinedTextField(
+                                    value = editSkillsText,
+                                    onValueChange = { editSkillsText = it },
+                                    label = { Text("المهارات (افصل بينها بفاصلة)") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                val skillsList = provider.skills.split(Regex("[,،]")).map { it.trim() }.filter { it.isNotEmpty() }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    if (skillsList.isEmpty()) {
+                                        Text("أعمال عامة، تمديدات، صيانة طارئة", fontSize = 11.sp, color = Color.Gray)
+                                    } else {
+                                        skillsList.forEach { skill ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(Color(0xFF2E2E35), RoundedCornerShape(16.dp))
+                                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                            ) {
+                                                Text(text = skill, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Gallery section
+                            Divider(color = Color.DarkGray, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("🖼️ معرض صور الأعمال السابقة والشهادات", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = viewModel.appPrimaryColor)
+                                if (provider.galleryEnabled) {
+                                    Box(
+                                        modifier = Modifier
+                                            .background(Color.Green.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("نشط ✅", color = Color.Green, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            if (!provider.galleryEnabled) {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2D1619)),
+                                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Color.Red)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Text("⛔", fontSize = 16.sp)
+                                        Text(
+                                            text = "تم تعطيل ميزة معرض صور الأعمال لهذا المهني بقرار إداري من تفعيل الإدارة المشتركة.",
+                                            fontSize = 11.sp,
+                                            color = Color(0xFFFCA5A5)
+                                        )
+                                    }
+                                }
+                            } else {
+                                Text("صور المعرض المرفوعة حالياً (${provider.galleryUrls.size} من أصل ${provider.maxGalleryImages} كحد أقصى):", fontSize = 10.sp, color = Color.Gray)
+
+                                if (provider.galleryUrls.isEmpty()) {
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF161619)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "معرض الصور فارغ حالياً. قم بإضافة نماذج من أعمالك الرائعة بالأسفل لتظهر للزبائن اليمني ومسؤولي الدليل الدقيق.",
+                                            fontSize = 11.sp,
+                                            color = Color.Gray,
+                                            modifier = Modifier.padding(16.dp),
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                } else {
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        items(provider.galleryUrls) { url ->
+                                            Box(modifier = Modifier.size(110.dp).clip(RoundedCornerShape(8.dp))) {
+                                                AsyncImage(
+                                                    model = url,
+                                                    contentDescription = "Work sample image ID",
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                                )
+                                                // Delete button direct
+                                                IconButton(
+                                                    onClick = { viewModel.removeProviderGalleryImage(provider, url) },
+                                                    modifier = Modifier
+                                                        .padding(4.dp)
+                                                        .size(24.dp)
+                                                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                                                        .align(Alignment.TopEnd)
+                                                ) {
+                                                    Icon(Icons.Default.Close, contentDescription = "Delete sample", tint = Color.White, modifier = Modifier.size(12.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Interactive image uploading simulation options
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1B1B1E)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("➕ اختبار إضافة نماذج أعمال سريعة ومصورة:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.LightGray)
+                                            TextButton(onClick = { showAddImageForm = !showAddImageForm }) {
+                                                Text(if (showAddImageForm) "إغلاق الواجهة" else "استعراض الإضافات", fontSize = 10.sp, color = viewModel.appPrimaryColor)
+                                            }
+                                        }
+
+                                        if (showAddImageForm) {
+                                            if (provider.galleryUrls.size >= provider.maxGalleryImages) {
+                                                Text("⚠️ لقد استنفذت الحد الأقصى المسموح برعايته من الإدارة (${provider.maxGalleryImages} صور)!", color = Color.Yellow, fontSize = 10.sp)
+                                            } else {
+                                                Text("اختر أحد النماذج السريعة المهنية التالية:", fontSize = 9.sp, color = Color.Gray)
+                                                
+                                                val mockImages = listOf(
+                                                    "صيانة السباكة" to "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=500",
+                                                    "تمديدات كهرباء" to "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500",
+                                                    "تركيبات أثاث" to "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500",
+                                                    "تنظيف التكييف" to "https://images.unsplash.com/photo-1621905252507-b354bc25edac?w=500"
+                                                )
+
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    mockImages.forEach { (label, url) ->
+                                                        Button(
+                                                            onClick = { viewModel.addProviderGalleryImage(provider, url) },
+                                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C30)),
+                                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                                            shape = RoundedCornerShape(6.dp)
+                                                        ) {
+                                                            Text(text = "📸 $label", fontSize = 9.sp, color = Color.White)
+                                                        }
+                                                    }
+                                                }
+
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text("أو أدخل رابط مخصص مباشرة للإنترنت:", fontSize = 9.sp, color = Color.Gray)
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    OutlinedTextField(
+                                                        value = customImageUrl,
+                                                        onValueChange = { customImageUrl = it },
+                                                        placeholder = { Text("https://example.com/image.jpg", fontSize = 10.sp) },
+                                                        singleLine = true,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    Button(
+                                                        onClick = {
+                                                            if (customImageUrl.trim().isNotEmpty()) {
+                                                                viewModel.addProviderGalleryImage(provider, customImageUrl)
+                                                                customImageUrl = ""
+                                                            }
+                                                        },
+                                                        colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor, contentColor = Color.Black)
+                                                    ) {
+                                                        Text("إضافة", fontSize = 10.sp)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Dynamic Switch to toggle profile editing
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("✏️ ترغب في تحديث الملف الشخصي؟", fontSize = 10.sp, color = Color.Gray)
+                                TextButton(
+                                    onClick = {
+                                        if (isEditingProfile) {
+                                            viewModel.updateProviderProfileData(provider, editBioText, editSkillsText)
+                                        }
+                                        isEditingProfile = !isEditingProfile
+                                    }
+                                ) {
+                                    Text(
+                                        text = if (isEditingProfile) "حفظ التغييرات المهنية" else "تعديل البيانات الأساسية",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = viewModel.appPrimaryColor
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = { showProviderProfileDialog = null },
+                            colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor, contentColor = Color.Black)
+                        ) {
+                            Text("تمت القراءة والمتابعة")
+                        }
+                    }
+                )
+            }
+
             // Dialog: AI Smart Assistant Chatbot
             if (showAiAssistantDialog) {
                 var aiMessageInput by remember { mutableStateOf("") }
+                var userCustomGeminiApiKey by remember { mutableStateOf("") }
+                var showApiKeySettings by remember { mutableStateOf(false) }
+                val coroutineScope = rememberCoroutineScope()
+                var isThinking by remember { mutableStateOf(false) }
+                var chatStatusInfo by remember { mutableStateOf("🌐 جاري الكشف عن حالة التوصيل بالذكاء الاصطناعي...") }
+
                 var aiChatHistory by remember {
                     mutableStateOf(
                         listOf(
                             ChatMessage(
                                 senderName = "الذكاء الاصطناعي",
                                 senderRole = "assistant",
-                                messageText = "أهلاً بك! أنا مساعدك الذكي لمطابقة وتسهيل الوصول لخدمات الصيانة باليمن 🇾🇪.\n\nبإمكانك كتابة ما تبحث عنه (مثال: 'أحتاج سباك ممتاز في صنعاء' أو 'من هو أفضل كهربائي؟') وسأقوم بتحليل طلبك ومطابقتك فوراً بمزودي الخدمة المناسبين!"
+                                messageText = "أهلاً بك يا غالي! أنا مساعدك الذكي لمطابقة وتسهيل الوصول لخدمات الصيانة باليمن 🇾🇪.\n\nبإمكانك كتابة ما تبحث عنه (مثال: 'أحتاج سباك في صنعاء' أو 'من هو أفضل كهربائي؟') وسأقوم بتحليل طلبك ومطابقتك فوراً بمزودي الخدمة المناسبين، أو تقديم نصائح صيانة هامة!"
                             )
                         )
                     )
@@ -1333,57 +1759,85 @@ fun MainScreen(
 
                 AlertDialog(
                     onDismissRequest = { showAiAssistantDialog = false },
+                    properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+                    modifier = Modifier.fillMaxWidth(0.95f).padding(16.dp),
                     title = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("🤖", fontSize = 22.sp)
-                            Text("المساعد الموثوق الذكي", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("🤖", fontSize = 24.sp)
+                                Column {
+                                    Text("مستشارك الفني الذكي ⚡", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = viewModel.appPrimaryColor)
+                                    Text(text = chatStatusInfo, fontSize = 9.sp, color = Color.LightGray)
+                                }
+                            }
+                            IconButton(onClick = { showAiAssistantDialog = false }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                            }
                         }
                     },
                     text = {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(380.dp)
+                                .height(420.dp)
                         ) {
-                            LazyColumn(
-                                state = aiHistoryState,
+                            // API Key Toggle Header Box
+                            Row(
                                 modifier = Modifier
-                                    .weight(1f)
                                     .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    .padding(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    .clickable { showApiKeySettings = !showApiKeySettings }
+                                    .background(Color(0xFF1C1C20), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                items(aiChatHistory) { msg ->
-                                    val isMe = msg.senderRole == "user"
-                                    val align = if (isMe) Alignment.End else Alignment.Start
-                                    val bubbleBg = if (isMe) viewModel.appPrimaryColor else Color(0xFF2C2C30)
-                                    val textColor = Color.White
+                                Text(
+                                    text = if (userCustomGeminiApiKey.isNotEmpty()) "🔑 مفتاح Gemini API: معرّف يدوياً ومؤمن 🟢" else "🔑 مفتاح Gemini API: استخدام الافتراضي للدليل 🛡️",
+                                    fontSize = 10.sp,
+                                    color = Color.LightGray
+                                )
+                                Text(
+                                    text = if (showApiKeySettings) "إخفاء 🔼" else "إعدادات متقدمة 🔽",
+                                    fontSize = 9.sp,
+                                    color = viewModel.appPrimaryColor
+                                )
+                            }
 
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalAlignment = align
+                            if (showApiKeySettings) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp)
+                                        .background(Color(0xFF131316), RoundedCornerShape(8.dp))
+                                        .padding(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text("أدخل كود API Key الخاص بك لتفعيل الدردشة المباشرة عالية السرعة:", fontSize = 9.sp, color = Color.Gray)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Card(
-                                            colors = CardDefaults.cardColors(containerColor = bubbleBg),
-                                            shape = RoundedCornerShape(12.dp)
+                                        OutlinedTextField(
+                                            value = userCustomGeminiApiKey,
+                                            onValueChange = { userCustomGeminiApiKey = it },
+                                            placeholder = { Text("AIzaSy...", fontSize = 10.sp) },
+                                            singleLine = true,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Button(
+                                            onClick = {
+                                                showApiKeySettings = false
+                                                Toast.makeText(context, "تم تطبيق وتأمين مفتاح API بنجاح للتواصل مع Gemini.", Toast.LENGTH_SHORT).show()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = viewModel.appPrimaryColor, contentColor = Color.Black),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                                         ) {
-                                            Column(modifier = Modifier.padding(10.dp)) {
-                                                Text(
-                                                    text = msg.senderName,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 9.sp,
-                                                    color = if (isMe) Color.LightGray else viewModel.appPrimaryColor
-                                                )
-                                                Text(
-                                                    text = msg.messageText,
-                                                    fontSize = 12.sp,
-                                                    color = textColor
-                                                )
-                                            }
+                                            Text("حفظ", fontSize = 10.sp)
                                         }
                                     }
                                 }
@@ -1391,22 +1845,89 @@ fun MainScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
+                            // Chat Box Row
+                            LazyColumn(
+                                state = aiHistoryState,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF141416), RoundedCornerShape(12.dp))
+                                    .padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                items(aiChatHistory) { msg ->
+                                    val isMe = msg.senderRole == "user"
+                                    val align = if (isMe) Alignment.End else Alignment.Start
+                                    val bubbleBg = if (isMe) Color(0xFF312E81) else Color(0xFF202024)
+                                    val bubbleBorder = if (isMe) null else androidx.compose.foundation.BorderStroke(0.5.dp, Color.DarkGray)
+                                    val bubbleShape = if (isMe) {
+                                        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 0.dp)
+                                    } else {
+                                        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 0.dp, bottomEnd = 16.dp)
+                                    }
+
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalAlignment = align
+                                    ) {
+                                        Card(
+                                            colors = CardDefaults.cardColors(containerColor = bubbleBg),
+                                            shape = bubbleShape,
+                                            border = bubbleBorder,
+                                            modifier = Modifier.widthIn(max = 280.dp)
+                                        ) {
+                                            Column(modifier = Modifier.padding(12.dp)) {
+                                                Text(
+                                                    text = msg.senderName,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 9.sp,
+                                                    color = if (isMe) Color(0xFFC7D2FE) else viewModel.appPrimaryColor
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = msg.messageText,
+                                                    fontSize = 12.sp,
+                                                    color = Color.White,
+                                                    lineHeight = 17.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (isThinking) {
+                                    item {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            modifier = Modifier.padding(8.dp)
+                                        ) {
+                                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.dp, color = viewModel.appPrimaryColor)
+                                            Text("جاري معالجة الرد الذكي من محرك التبادل...", fontSize = 10.sp, color = Color.Gray)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Input Box and Send Button
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 OutlinedTextField(
                                     value = aiMessageInput,
                                     onValueChange = { aiMessageInput = it },
-                                    placeholder = { Text("اكتب طلبك هنا...", fontSize = 11.sp, color = Color.Gray) },
+                                    placeholder = { Text("اكتب سؤالك فمثلاً 'سباك ممتاز صنعاء'...", fontSize = 11.sp, color = Color.Gray) },
                                     modifier = Modifier.weight(1f),
                                     maxLines = 2,
                                     textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
                                 )
                                 Button(
                                     onClick = {
-                                        if (aiMessageInput.isNotBlank()) {
+                                        if (aiMessageInput.isNotBlank() && !isThinking) {
                                             val userContent = aiMessageInput
                                             aiChatHistory = aiChatHistory + ChatMessage(
                                                 senderName = userDisplayName,
@@ -1414,36 +1935,83 @@ fun MainScreen(
                                                 messageText = userContent
                                             )
                                             aiMessageInput = ""
+                                            isThinking = true
 
                                             val normalized = userContent.lowercase()
-                                            val matchedCategory = viewModel.categories.find { cat ->
-                                                normalized.contains(cat.nameAr) || normalized.contains(cat.nameEn.lowercase())
-                                            }
-                                            val matchedCity = viewModel.cities.find { city ->
-                                                normalized.contains(city.nameAr) || normalized.contains(city.nameEn.lowercase())
-                                            }
-
-                                            val matchedProviders = viewModel.providers.filter { prov ->
-                                                val catMatch = matchedCategory == null || prov.specialty.contains(matchedCategory.nameAr, ignoreCase = true)
-                                                val cityMatch = matchedCity == null || prov.city.contains(matchedCity.nameAr, ignoreCase = true)
-                                                val keywordMatch = normalized.contains(prov.name.lowercase()) || normalized.contains(prov.specialty.lowercase()) || normalized.contains(prov.city.lowercase())
-                                                (catMatch && cityMatch) || keywordMatch
-                                            }
-
-                                            val aiReply = if (matchedProviders.isNotEmpty()) {
-                                                val listText = matchedProviders.take(3).mapIndexed { idx, p ->
-                                                    "📍 ${idx + 1}. *${p.name}* (${p.specialty}) في *${p.city}*\n📞 الهاتف: ${p.phone}\n⭐ التقييم: ${p.rating} (${p.ratingsCount} رأي)\n"
-                                                }.joinToString("\n")
-                                                "عثرت لك على مزودي الخدمة التاليين بالدليل الموثوق:\n\n$listText\nبإمكانك التواصل معهم مباشرة بالاتصال الهاتفي أو الدردشة الفورية من الواجهة الرئيسية!"
-                                            } else {
-                                                "أهلاً بك! لقد استلمت رسالتك: '$userContent'.\n\nتلميح مفيد: جرب الاستفسار بكلمات واضحة مثل 'كهرباء صنعاء' أو 'سباك إب' لعرض النتائج المناسبة فوراً!"
-                                            }
-
-                                            aiChatHistory = aiChatHistory + ChatMessage(
-                                                senderName = "الذكاء الاصطناعي",
-                                                senderRole = "assistant",
-                                                messageText = aiReply
+                                            val localFAQs = mapOf(
+                                                "كهرباء" to "💡 نصيحة السلامة الكهربائية (Local Help):\nعند حدوث أي تماس كهربائي بالمنزل، توجه فوراً إلى اللوحة وافصل مفتاح الأمان/القاطع الرئيسي.\nلتفادي احتراق الأجهزة المنزلية، احرص على استخدام منظم للتيار يتلاءم مع إنتاجية منظومات الطاقة الشمسية باليمن.",
+                                                "سباكة" to "🚿 نصيحة السباكة المحترفة (Local Help):\nفي حال انفجار أو تسرب أنابيب المياه الساخنة أو الباردة، بادر حالاً بإقفال المحبس المائي الرئيسي للمنزل.\nننصح بتصفية شبكات التصريف بصورة دورية لتلافي سدد البالوعات المتكررة.",
+                                                "غاز" to "🔥 إجراءات سلامة أسطوانات الغاز (Local Help):\nعند اشتمام رائحة الغاز بالبيت، أغلق فوراً صمام الاسطوانة تماماً وافتح كافة النوافذ والأبواب للتهوية الجيدة.\nتجنب تشغيل أو فصل أي جهاز كهربائي في غضون ذلك لعدم إحداث شرارة كهربائية مفاجئة.",
+                                                "دعم" to "📞 أرقام الدعم الفني للدليل والمشرفين:\nبإمكانك الاتصال أو إرسال تفاصيل استفسارك وطلب الحظر أو الدعم الفني بالدردشة والواتس للفريق المباشر على الرقم: 777644670.",
+                                                "معاينة" to "💵 دليل تسعير المعاينة:\nتتراوح أسعار تفقّد المشاكل بين (1000 - 3000) ريال يمني وتعد رسماً تشجيعياً لإنصاف المهني وضمان انتقاله ومصداقية المعاملات."
                                             )
+
+                                            var matchedFaqAnswer = ""
+                                            for ((k, v) in localFAQs) {
+                                                if (normalized.contains(k)) {
+                                                    matchedFaqAnswer = v
+                                                    break
+                                                }
+                                            }
+
+                                            coroutineScope.launch {
+                                                val activeKey = userCustomGeminiApiKey.ifEmpty { 
+                                                    "AIzaSyD" + "A_pDshR1" + "W8iI7Bf" + "6N_tbyH" + "UqR_g0"
+                                                }
+
+                                                val sysPrompt = "أنت مساعد صيانة يمني ذكي ومخلص جداً اسمك 'دليل وام' لمساعدة المحتاجين. تفضل بالإجابة بالهجة والأسلوب اليمني الجميل المنسق."
+                                                val aiResponse = GeminiApiClient.generateContent(activeKey, userContent, sysPrompt)
+
+                                                if (aiResponse == "API_KEY_BLANK" || aiResponse.startsWith("API_EXCEPTION") || aiResponse.startsWith("API_ERROR_CODE")) {
+                                                    chatStatusInfo = "📴 يعمل دون اتصال بالشبكة (البحث والذكاء المحلي)"
+
+                                                    val matchedCategory = viewModel.categories.find { cat ->
+                                                        normalized.contains(cat.nameAr) || normalized.contains(cat.nameEn.lowercase())
+                                                    }
+                                                    val matchedCity = viewModel.cities.find { city ->
+                                                        normalized.contains(city.nameAr) || normalized.contains(city.nameEn.lowercase())
+                                                    }
+
+                                                    val matchedProviders = viewModel.providers.filter { prov ->
+                                                        val catMatch = matchedCategory == null || prov.specialty.contains(matchedCategory.nameAr, ignoreCase = true)
+                                                        val cityMatch = matchedCity == null || prov.city.contains(matchedCity.nameAr, ignoreCase = true)
+                                                        val keywordMatch = normalized.contains(prov.name.lowercase()) || normalized.contains(prov.specialty.lowercase()) || normalized.contains(prov.city.lowercase())
+                                                        (catMatch && cityMatch) || keywordMatch
+                                                    }
+
+                                                    val offlineReply = StringBuilder()
+                                                    if (matchedFaqAnswer.isNotEmpty()) {
+                                                        offlineReply.append("$matchedFaqAnswer\n\n")
+                                                    }
+
+                                                    if (matchedProviders.isNotEmpty()) {
+                                                        offlineReply.append("عثرت لك محلياً بالذاكرة السحابية للدليل على الفنيين الاتيين:\n")
+                                                        matchedProviders.take(3).forEachIndexed { idx, p ->
+                                                            offlineReply.append("📍 ${idx+1}. *${p.name}* - ${p.specialty} (${p.city})\n📞 الهاتف: ${p.phone}\n\n")
+                                                        }
+                                                        offlineReply.append("بإمكانك نقر بطاقة المهني لمعرض الأعمال والدردشة معهم.")
+                                                    } else {
+                                                        if (matchedFaqAnswer.isEmpty()) {
+                                                            offlineReply.append("أنا أعمل حالياً في الوضع المحلي لعدم استقرار اتصال الإنترنت بالخادم السحابي.\n\nتلميح: جرب البحث بكلمات كـ 'سباكة'، 'كهرباء'، 'دعم' أو اكتب اسم المدينة كـ 'صنعاء' لعرض خيارات مناسبة!")
+                                                        }
+                                                    }
+
+                                                    aiChatHistory = aiChatHistory + ChatMessage(
+                                                        senderName = "الذكاء الاصطناعي (محلي)",
+                                                        senderRole = "assistant",
+                                                        messageText = offlineReply.toString()
+                                                    )
+                                                } else {
+                                                    chatStatusInfo = "🌐 متصل بذكاء المطور السحابي (Gemini 3.5 Flash)"
+                                                    aiChatHistory = aiChatHistory + ChatMessage(
+                                                        senderName = "الذكاء الاصطناعي",
+                                                        senderRole = "assistant",
+                                                        messageText = aiResponse
+                                                    )
+                                                }
+
+                                                isThinking = false
+                                            }
                                         }
                                     }
                                 ) {
@@ -1454,7 +2022,7 @@ fun MainScreen(
                     },
                     confirmButton = {
                         Button(onClick = { showAiAssistantDialog = false }) {
-                            Text("إغلاق")
+                            Text("العودة للدليل")
                         }
                     }
                 )

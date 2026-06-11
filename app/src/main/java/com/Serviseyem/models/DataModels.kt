@@ -19,7 +19,11 @@ data class ServiceProvider(
     var isChatMuted: Boolean = false, // Admin can mute chat for specific providers
     var gender: String = "ذكر", // "ذكر" / "أنثى"
     var photoSource: String = "معرض الصور", // "معرض الصور" / "التقاط بالكاميرا"
-    var photoType: String = "صورة شخصية (سيلفي)" // "صورة شخصية (سيلفي)" / "صورة تعبيرية عن المهنة"
+    var photoType: String = "صورة شخصية (سيلفي)", // "صورة شخصية (سيلفي)" / "صورة تعبيرية عن المهنة"
+    var skills: String = "صيانة عامة، تمديدات حديثة، إصلاح الأعطال الطارئة",
+    var galleryUrls: List<String> = emptyList(),
+    var galleryEnabled: Boolean = true,
+    var maxGalleryImages: Int = 10
 )
 
 data class Category(

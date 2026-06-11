@@ -697,6 +697,117 @@ fun AdminChatsSubSection(viewModel: AppViewModel, onOpenChatSession: (ChatSessio
 }
 
 @Composable
+fun RealtimePieChartDashboard(providers: List<ServiceProvider>) {
+    val distribution = providers.groupBy { it.specialty }
+        .mapValues { it.value.size }
+        .filter { it.value > 0 }
+
+    val total = distribution.values.sum().toFloat()
+
+    val colorsList = listOf(
+        Color(0xFF6366F1), // Indigo
+        Color(0xFF3B82F6), // Blue
+        Color(0xFF10B981), // Emerald
+        Color(0xFFF59E0B), // Amber
+        Color(0xFFEF4444), // Red
+        Color(0xFF8B5CF6), // Purple
+        Color(0xFFEC4899), // Pink
+        Color(0xFF14B8A6)  // Teal
+    )
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF131316)),
+        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF2E2E33))),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "📊 رسم بياني دائري (Live Pie Chart) - توزيع المهنيين في اليمن",
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "تحديث فوري وتفاعلي متزامن مع قبول طلبات الشبكة الفرعية.",
+                fontSize = 10.sp,
+                color = Color.LightGray
+            )
+
+            if (total == 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("لا تتوفر إحصائيات كافية لعدم وجود مزودي خدمات نشطين حالياً.", color = Color.Gray, fontSize = 11.sp)
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Draw Pie Chart on Canvas
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .testTag("analytics_pie_chart")
+                    ) {
+                        var startAngle = 0f
+                        distribution.values.forEachIndexed { index, count ->
+                            val sweepAngle = (count / total) * 360f
+                            val color = colorsList[index % colorsList.size]
+                            drawArc(
+                                color = color,
+                                startAngle = startAngle,
+                                sweepAngle = sweepAngle,
+                                useCenter = true
+                            )
+                            startAngle += sweepAngle
+                        }
+                    }
+
+                    // Legend values
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        distribution.entries.forEachIndexed { index, entry ->
+                            val color = colorsList[index % colorsList.size]
+                            val percentage = (entry.value / total) * 100
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .background(color, RoundedCornerShape(2.dp))
+                                )
+                                Text(
+                                    text = "${entry.key}: ${entry.value} (${String.format(java.util.Locale.US, "%.1f", percentage)}%)",
+                                    fontSize = 10.sp,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun AdminProvidersSubSection(viewModel: AppViewModel) {
     val context = LocalContext.current
 
@@ -707,6 +818,11 @@ fun AdminProvidersSubSection(viewModel: AppViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize()
     ) {
+        // Real-time Pie Chart Dashboard Card
+        item {
+            RealtimePieChartDashboard(viewModel.providers)
+        }
+
         // Pending approval queue
         item {
             Text("📥 طلبات الانضمام المعلقة للتسجيل والترخيص (${viewModel.registrationRequests.size})", fontWeight = FontWeight.Bold, color = Color.White)
@@ -870,6 +986,65 @@ fun AdminProvidersSubSection(viewModel: AppViewModel) {
                             checked = p.isChatMuted,
                             onCheckedChange = { viewModel.toggleProviderChatMute(p) }
                         )
+                    }
+
+                    Divider(color = Color.DarkGray, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+
+                    // Gallery Availability Toggle
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            Text("تنشيط معرض أعمال المهني (Gallery)", fontSize = 11.sp, color = Color.LightGray)
+                            Text("السماح للمهني برفع صوره واستعراضها بالكامل", fontSize = 9.sp, color = Color.Gray)
+                        }
+                        Switch(
+                            checked = p.galleryEnabled,
+                            onCheckedChange = { viewModel.updateProviderGallerySettings(p, it, p.maxGalleryImages) }
+                        )
+                    }
+
+                    Divider(color = Color.DarkGray, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+
+                    // Portfolio max gallery images allowed setup
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            Text("السقف الأقصى لعدد الصور المرفوعة", fontSize = 11.sp, color = Color.LightGray)
+                            Text("الحد الأقصى المسموح برعايته: ${p.maxGalleryImages} صور", fontSize = 9.sp, color = Color.Gray)
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IconButton(
+                                onClick = { if (p.maxGalleryImages > 1) viewModel.updateProviderGallerySettings(p, p.galleryEnabled, p.maxGalleryImages - 1) },
+                                modifier = Modifier.size(28.dp),
+                                enabled = p.maxGalleryImages > 1
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = if (p.maxGalleryImages > 1) Color.Red else Color.DarkGray)
+                            }
+
+                            Text(
+                                text = "${p.maxGalleryImages}",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+
+                            IconButton(
+                                onClick = { if (p.maxGalleryImages < 20) viewModel.updateProviderGallerySettings(p, p.galleryEnabled, p.maxGalleryImages + 1) },
+                                modifier = Modifier.size(28.dp),
+                                enabled = p.maxGalleryImages < 20
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Increase", tint = if (p.maxGalleryImages < 20) Color.Green else Color.DarkGray)
+                            }
+                        }
                     }
                 }
             }

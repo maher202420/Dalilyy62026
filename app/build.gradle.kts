@@ -64,6 +64,9 @@ dependencies {
     // Navigation for compose
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
+    // Coil Image Loading
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
     // Firebase Firestore
     implementation(platform("com.google.firebase:firebase-bom:33.1.1"))
     implementation("com.google.firebase:firebase-firestore-ktx")

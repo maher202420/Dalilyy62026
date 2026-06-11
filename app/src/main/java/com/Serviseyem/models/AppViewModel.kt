@@ -949,6 +949,38 @@ class AppViewModel : ViewModel() {
         addActivityLog("تسجيل بلاغ/شكوى معيارية للمراجعة ضد: $techName")
     }
 
+    fun updateProviderGallerySettings(provider: ServiceProvider, enabled: Boolean, maxImages: Int) {
+        firestore.collection("service_providers").document(provider.id).update(
+            "galleryEnabled", enabled,
+            "maxGalleryImages", maxImages
+        )
+        addActivityLog("تعديل إعدادات معرض الصور للفني ${provider.name}: تفعيل=$enabled، الحد الأقصى=$maxImages")
+    }
+
+    fun addProviderGalleryImage(provider: ServiceProvider, imageUrl: String) {
+        val nextList = provider.galleryUrls.toMutableList()
+        if (nextList.size < provider.maxGalleryImages) {
+            nextList.add(imageUrl)
+            firestore.collection("service_providers").document(provider.id).update("galleryUrls", nextList)
+            addActivityLog("إضافة صورة لمعرض أعمال الفني ${provider.name}: $imageUrl")
+        }
+    }
+
+    fun removeProviderGalleryImage(provider: ServiceProvider, imageUrl: String) {
+        val nextList = provider.galleryUrls.toMutableList()
+        nextList.remove(imageUrl)
+        firestore.collection("service_providers").document(provider.id).update("galleryUrls", nextList)
+        addActivityLog("إزالة صورة من معرض أعمال الفني ${provider.name}")
+    }
+
+    fun updateProviderProfileData(provider: ServiceProvider, biography: String, skills: String) {
+        firestore.collection("service_providers").document(provider.id).update(
+            "biography", biography,
+            "skills", skills
+        )
+        addActivityLog("تعديل نبذة ومهارات الفني ${provider.name}")
+    }
+
     override fun onCleared() {
         super.onCleared()
         categoriesListener?.remove()
