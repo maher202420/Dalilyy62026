@@ -18,6 +18,3 @@ local.properties
 # OS files
 .DS_Store
 Thumbs.db
-
-# Keep tracking root app-debug.apk if exists
-!/app-debug.apk
