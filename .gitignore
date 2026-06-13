@@ -1,0 +1,23 @@
+# Built artifacts
+**/build/
+.gradle/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+.navigation/
+
+# Local configuration files
+local.properties
+
+# Log files
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Keep tracking root app-debug.apk if exists
+!/app-debug.apk
