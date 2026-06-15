@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Star / Gear Service Icon in Yemen Gold -->
-    <path
-        android:fillColor="#FFD700"
-        android:pathData="M54,24 L63,42 L82,42 L67,54 L73,72 L54,61 L35,72 L41,54 L26,42 L45,42 Z" />
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="108dp"
+        android:height="108dp"
+        android:drawable="@drawable/service_yemen_icon_1781198610382"
+        android:gravity="center" />
+</layer-list>

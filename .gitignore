@@ -1,17 +1,23 @@
-# Built-in Gradle outputs
+# Built artifacts
+**/build/
 .gradle/
-build/
-app/build/
 
-# Android Studio local properties config
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+.navigation/
+
+# Local configuration files
 local.properties
 
 # Log files
 *.log
 
-# Keystore files (keep debug.keystore untracked/private if desired, but we explicitly keep keys intact)
-*.keystore
-!debug.keystore
+# OS files
+.DS_Store
+Thumbs.db
 
-# Specifically force git to keep track of the local compiled binary if placed in root
+# Keep tracking root app-debug.apk if exists
 !/app-debug.apk

@@ -1,11 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-}
-
-repositories {
-    google()
-    mavenCentral()
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -14,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.Serviseyem"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -45,7 +41,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
+        kotlinCompilerExtensionVersion = "1.5.14" // matches Kotlin 1.9.24
     }
     packaging {
         resources {
@@ -55,19 +51,29 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    
-    // Explicit modern Material 3 version to avoid transitive downgrade conflicts
-    implementation("androidx.compose.material3:material3:1.2.1")
-    
-    // Compose BOM & other core dependencies
-    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.1")
+    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation(platform("androidx.compose:compose-bom:2024.05.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+
+    // Navigation for compose
     implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // Coil Image Loading
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Firebase Firestore
+    implementation(platform("com.google.firebase:firebase-bom:33.1.1"))
+    implementation("com.google.firebase:firebase-firestore-ktx")
+
+    // Google Maps API
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
 }
