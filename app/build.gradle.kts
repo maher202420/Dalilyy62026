@@ -1,5 +1,6 @@
 import java.io.FileInputStream
 import java.util.Properties
+import java.security.MessageDigest
 
 plugins {
     id("com.android.application")
@@ -43,10 +44,16 @@ android {
         if (adminPass.isEmpty()) adminPass = "maher736462"
         if (ownerPass.isEmpty()) ownerPass = "maher--736462"
 
+        fun getSha256Hex(input: String): String {
+            val md = MessageDigest.getInstance("SHA-256")
+            val digest = md.digest(input.toByteArray(Charsets.UTF_8))
+            return digest.joinToString("") { byte -> String.format("%02x", byte) }
+        }
+
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
         buildConfigField("String", "ADMIN_USERNAME", "\"$adminUser\"")
-        buildConfigField("String", "ADMIN_PASSWORD", "\"$adminPass\"")
-        buildConfigField("String", "OWNER_PASSWORD", "\"$ownerPass\"")
+        buildConfigField("String", "ADMIN_PASSWORD_HASH", "\"${getSha256Hex(adminPass)}\"")
+        buildConfigField("String", "OWNER_PASSWORD_HASH", "\"${getSha256Hex(ownerPass)}\"")
     }
 
     buildTypes {

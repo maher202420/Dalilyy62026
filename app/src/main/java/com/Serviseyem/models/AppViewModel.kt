@@ -32,8 +32,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // Admin Credentials
     val adminUsername = BuildConfig.ADMIN_USERNAME.ifEmpty { "WAM2026" }
-    val adminPassword = BuildConfig.ADMIN_PASSWORD.ifEmpty { "maher736462" }
-    val ownerPassword = BuildConfig.OWNER_PASSWORD.ifEmpty { "maher--736462" }
+    val adminPasswordHash = BuildConfig.ADMIN_PASSWORD_HASH
+    val ownerPasswordHash = BuildConfig.OWNER_PASSWORD_HASH
+
+    // SHA-256 Hashing helper to secure password verification
+    fun hashPassword(password: String): String {
+        return try {
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = md.digest(password.toByteArray(Charsets.UTF_8))
+            digest.joinToString("") { String.format("%02x", it) }
+        } catch (e: Exception) {
+            ""
+        }
+    }
 
     // List of Cities in Yemen
     var allowedCities by mutableStateOf(listOf("صنعاء", "عدن", "إب", "تعز", "حضرموت"))
@@ -105,7 +116,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- Reset/Complete System Purge via Password check ---
     fun performEmergencyDataSanitize(enteredPass: String): Boolean {
-        if (enteredPass == adminPassword) {
+        if (hashPassword(enteredPass) == adminPasswordHash) {
             // Wipe collections and reset everything
             prefs.edit().clear().apply()
             initDefaultSeeds()

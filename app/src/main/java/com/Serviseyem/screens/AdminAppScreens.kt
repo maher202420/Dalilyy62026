@@ -126,8 +126,7 @@ fun AdminAppScreens(
                                     Text("تذكرني لـ 7 أيام", color = Color.LightGray, fontSize = 12.sp)
                                 }
                                 TextButton(onClick = {
-                                    Toast.makeText(context, "الرمز الافتراضي للأدمن: WAM2026 / maher736462", Toast.LENGTH_LONG).show()
-                                    Toast.makeText(context, "الرمز الافتراضي للمالك: WAM2026 / maher--736462", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "كلمة المرور الافتراضية مسجلة في ملف الإعدادات البيئية من أجل الآمان 🛡️", Toast.LENGTH_LONG).show()
                                 }) {
                                     Text("نسيت الرمز؟", color = Color.Gold, fontSize = 11.sp)
                                 }
@@ -136,11 +135,12 @@ fun AdminAppScreens(
                             Button(
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.Gold, contentColor = Color.Black),
                                 onClick = {
-                                    if (adminUser == viewModel.adminUsername && adminPass == viewModel.adminPassword) {
+                                    val enteredPassHash = viewModel.hashPassword(adminPass)
+                                    if (adminUser == viewModel.adminUsername && enteredPassHash == viewModel.adminPasswordHash) {
                                         currentAdminRole = UserRole.ADMIN
                                         stepId = 2 // Progress to OTP
                                         Toast.makeText(context, "تم قبول المعرف! جاري إرسال رمز OTP للمنطقة.", Toast.LENGTH_SHORT).show()
-                                    } else if (adminUser == viewModel.adminUsername && adminPass == viewModel.ownerPassword) {
+                                    } else if (adminUser == viewModel.adminUsername && enteredPassHash == viewModel.ownerPasswordHash) {
                                         currentAdminRole = UserRole.OWNER
                                         stepId = 2 // Progress to OTP
                                         Toast.makeText(context, "مرحباً بالمالك العظيم! جاري إرسال رمز OTP.", Toast.LENGTH_SHORT).show()

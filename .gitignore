@@ -8,7 +8,5 @@
 /app/build/
 .DS_Store
 
-# Do NOT ignore app-debug.apk or apk files as per user request to track them
-# *.apk
+# Explicitly track app-debug.apk so it can be committed to Git as requested by the user
 !app-debug.apk
-
