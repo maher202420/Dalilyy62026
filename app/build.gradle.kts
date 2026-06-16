@@ -1,7 +1,9 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.google.gms.google-services")
 }
 
 android {
@@ -19,6 +21,32 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Load settings from environment or .env file
+        var geminiKey = System.getenv("GEMINI_API_KEY") ?: ""
+        var adminUser = System.getenv("ADMIN_USERNAME") ?: ""
+        var adminPass = System.getenv("ADMIN_PASSWORD") ?: ""
+        var ownerPass = System.getenv("OWNER_PASSWORD") ?: ""
+
+        val envFile = project.rootProject.file(".env").let { if (it.exists()) it else project.file(".env") }
+        if (envFile.exists()) {
+            val envProperties = Properties()
+            FileInputStream(envFile).use { envProperties.load(it) }
+            if (geminiKey.isEmpty()) geminiKey = envProperties.getProperty("GEMINI_API_KEY") ?: ""
+            if (adminUser.isEmpty()) adminUser = envProperties.getProperty("ADMIN_USERNAME") ?: ""
+            if (adminPass.isEmpty()) adminPass = envProperties.getProperty("ADMIN_PASSWORD") ?: ""
+            if (ownerPass.isEmpty()) ownerPass = envProperties.getProperty("OWNER_PASSWORD") ?: ""
+        }
+
+        // Defaults if still empty
+        if (adminUser.isEmpty()) adminUser = "WAM2026"
+        if (adminPass.isEmpty()) adminPass = "maher736462"
+        if (ownerPass.isEmpty()) ownerPass = "maher--736462"
+
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
+        buildConfigField("String", "ADMIN_USERNAME", "\"$adminUser\"")
+        buildConfigField("String", "ADMIN_PASSWORD", "\"$adminPass\"")
+        buildConfigField("String", "OWNER_PASSWORD", "\"$ownerPass\"")
     }
 
     buildTypes {
@@ -39,6 +67,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14" // matches Kotlin 1.9.24
@@ -60,19 +89,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-
-    // Navigation for compose
-    implementation("androidx.navigation:navigation-compose:2.7.7")
-
-    // Coil Image Loading
-    implementation("io.coil-kt:coil-compose:2.6.0")
-
-    // Firebase Firestore
-    implementation(platform("com.google.firebase:firebase-bom:33.1.1"))
-    implementation("com.google.firebase:firebase-firestore-ktx")
-
-    // Google Maps API
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

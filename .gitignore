@@ -1,23 +1,14 @@
-# Built artifacts
-**/build/
-.gradle/
-
-# Android Studio / IntelliJ
-.idea/
-*.iml
-*.ipr
-*.iws
-.navigation/
-
-# Local configuration files
-local.properties
-
-# Log files
+# Android ignore rules
+*.class
 *.log
-
-# OS files
+.gradle
+/local.properties
+/.idea/
+/build/
+/app/build/
 .DS_Store
-Thumbs.db
 
-# Keep tracking root app-debug.apk if exists
-!/app-debug.apk
+# Do NOT ignore app-debug.apk or apk files as per user request to track them
+# *.apk
+!app-debug.apk
+
