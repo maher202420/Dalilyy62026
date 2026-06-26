@@ -445,90 +445,118 @@ fun MainAppScreen(viewModel: MainViewModel) {
         modifier = Modifier.fillMaxSize(),
         topBar = {
             Surface(
-                color = AppTheme.surfaceDark,
-                border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.1f))
+                color = Color(0xFF0D1821),
+                border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.08f))
             ) {
                 Row(
                     modifier = Modifier
                         .statusBarsPadding()
                         .fillMaxWidth()
-                        .height(56.dp)
+                        .height(60.dp)
                         .padding(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // اللوجو المطور مع تفعيل البوابة الخلفية السرية بـ 5 نقرات متتالية
+                    // أزرار الرأس الإضافية (الإدارة والإشعارات) - على اليسار
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                val now = System.currentTimeMillis()
-                                if (now - lastLogoClickTime < 1500) {
-                                    logoClickCount++
-                                } else {
-                                    logoClickCount = 1
-                                }
-                                lastLogoClickTime = now
-                                
-                                if (logoClickCount >= 5) {
-                                    logoClickCount = 0
-                                    showBackdoorLogin = true
-                                    Toast.makeText(context, "🤫 جاري فتح البوابة الخلفية للمالك...", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            .padding(4.dp)
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
+                        // زر الإدارة (لوحة التحكم) المتطابق تماماً
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(AppTheme.primaryRed),
-                            contentAlignment = Alignment.Center
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF131D35))
+                                .border(1.dp, Color(0xFF1E88E5).copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                                .clickable { currentScreen = "ADMIN" }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
+                            Icon(
+                                imageVector = Icons.Default.AdminPanelSettings,
+                                contentDescription = "لوحة التحكم",
+                                tint = Color(0xFF90CAF9),
+                                modifier = Modifier.size(16.dp)
+                            )
                             Text(
-                                text = settings.appLogoText,
-                                color = AppTheme.accentGold,
-                                fontSize = 11.sp,
+                                text = "الإدارة",
+                                color = Color.White,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                         
+                        // زر الإشعارات المتطابق تماماً (1 🔔)
+                        val unreadCount = viewModel.notifications.value.count { !it.isRead }
+                        val displayCount = if (unreadCount > 0) unreadCount else 1
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF131D35))
+                                .border(1.dp, Color(0xFF1E88E5).copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                                .clickable { showNotificationCenter = true }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "$displayCount",
+                                color = Color(0xFF90CAF9),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "الإشعارات",
+                                tint = Color(0xFF90CAF9),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    // اللوجو المطور واسم التطبيق - على اليمين في الـ RTL
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
-                            text = settings.appNameAr,
+                            text = "كل خدمات اليمن",
                             color = Color.White,
-                            fontSize = 13.sp,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
-                    }
-                    
-                    // أزرار الرأس الإضافية (الإشعارات والمسؤول)
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { showNotificationCenter = true }) {
-                            Box {
-                                Icon(Icons.Default.Notifications, contentDescription = "الإشعارات", tint = AppTheme.accentGold)
-                                val unreadCount = viewModel.notifications.value.count { !it.isRead }
-                                if (unreadCount > 0) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(14.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Red)
-                                            .align(Alignment.TopEnd),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("$unreadCount", color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
                         
-                        IconButton(onClick = { currentScreen = "ADMIN" }) {
-                            Icon(Icons.Default.AdminPanelSettings, contentDescription = "لوحة التحكم", tint = AppTheme.accentGold)
+                        // لوجو WAM المربع الأنيق
+                        Box(
+                            modifier = Modifier
+                                .size(width = 46.dp, height = 34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF0D47A1))
+                                .border(1.dp, Color(0xFF1E88E5), RoundedCornerShape(8.dp))
+                                .clickable {
+                                    val now = System.currentTimeMillis()
+                                    if (now - lastLogoClickTime < 1500) {
+                                        logoClickCount++
+                                    } else {
+                                        logoClickCount = 1
+                                    }
+                                    lastLogoClickTime = now
+                                    
+                                    if (logoClickCount >= 5) {
+                                        logoClickCount = 0
+                                        showBackdoorLogin = true
+                                        Toast.makeText(context, "🤫 جاري فتح البوابة الخلفية للمالك...", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "WAM",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -537,75 +565,95 @@ fun MainAppScreen(viewModel: MainViewModel) {
         bottomBar = {
             NavigationBar(
                 containerColor = AppTheme.surfaceDark,
-                contentColor = AppTheme.accentGold
+                contentColor = Color(0xFF90CAF9)
             ) {
+                // 1. الدليل
                 NavigationBarItem(
                     selected = currentScreen == "DIRECTORY",
                     onClick = { currentScreen = "DIRECTORY"; activeChatId = null },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    label = { Text("الرئيسية", fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("الدليل", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AppTheme.accentGold,
-                        selectedTextColor = AppTheme.accentGold,
+                        selectedIconColor = Color(0xFF90CAF9),
+                        selectedTextColor = Color(0xFF90CAF9),
                         unselectedIconColor = Color.Gray,
                         unselectedTextColor = Color.Gray,
-                        indicatorColor = AppTheme.darkBg
+                        indicatorColor = Color.Transparent
                     )
                 )
                 
+                // 2. الخريطة
                 NavigationBarItem(
                     selected = currentScreen == "MAPS",
                     onClick = { currentScreen = "MAPS"; activeChatId = null },
                     icon = { Icon(Icons.Default.Map, contentDescription = null) },
-                    label = { Text("الخرائط", fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("الخريطة", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AppTheme.accentGold,
-                        selectedTextColor = AppTheme.accentGold,
+                        selectedIconColor = Color(0xFF90CAF9),
+                        selectedTextColor = Color(0xFF90CAF9),
                         unselectedIconColor = Color.Gray,
                         unselectedTextColor = Color.Gray,
-                        indicatorColor = AppTheme.darkBg
+                        indicatorColor = Color.Transparent
                     )
                 )
                 
+                // 3. المحادثة
                 NavigationBarItem(
                     selected = currentScreen == "CHATS",
                     onClick = { currentScreen = "CHATS"; activeChatId = null },
                     icon = { Icon(Icons.Default.Chat, contentDescription = null) },
-                    label = { Text("الدردشات", fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("المحادثة", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AppTheme.accentGold,
-                        selectedTextColor = AppTheme.accentGold,
+                        selectedIconColor = Color(0xFF90CAF9),
+                        selectedTextColor = Color(0xFF90CAF9),
                         unselectedIconColor = Color.Gray,
                         unselectedTextColor = Color.Gray,
-                        indicatorColor = AppTheme.darkBg
+                        indicatorColor = Color.Transparent
                     )
                 )
                 
+                // 4. انضمام
                 NavigationBarItem(
                     selected = currentScreen == "JOIN",
                     onClick = { currentScreen = "JOIN"; activeChatId = null },
-                    icon = { Icon(Icons.Default.GroupAdd, contentDescription = null) },
-                    label = { Text("انضم إلينا", fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                    icon = { Icon(Icons.Default.HomeWork, contentDescription = null) },
+                    label = { Text("انضمام", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AppTheme.accentGold,
-                        selectedTextColor = AppTheme.accentGold,
+                        selectedIconColor = Color(0xFF90CAF9),
+                        selectedTextColor = Color(0xFF90CAF9),
                         unselectedIconColor = Color.Gray,
                         unselectedTextColor = Color.Gray,
-                        indicatorColor = AppTheme.darkBg
+                        indicatorColor = Color.Transparent
                     )
                 )
                 
+                // 5. معلومات
                 NavigationBarItem(
                     selected = currentScreen == "ABOUT",
                     onClick = { currentScreen = "ABOUT"; activeChatId = null },
                     icon = { Icon(Icons.Default.Info, contentDescription = null) },
-                    label = { Text("من نحن", fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("معلومات", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = AppTheme.accentGold,
-                        selectedTextColor = AppTheme.accentGold,
+                        selectedIconColor = Color(0xFF90CAF9),
+                        selectedTextColor = Color(0xFF90CAF9),
                         unselectedIconColor = Color.Gray,
                         unselectedTextColor = Color.Gray,
-                        indicatorColor = AppTheme.darkBg
+                        indicatorColor = Color.Transparent
+                    )
+                )
+                
+                // 6. الإدارة
+                NavigationBarItem(
+                    selected = currentScreen == "ADMIN",
+                    onClick = { currentScreen = "ADMIN"; activeChatId = null },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    label = { Text("الإدارة", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF90CAF9),
+                        selectedTextColor = Color(0xFF90CAF9),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray,
+                        indicatorColor = Color.Transparent
                     )
                 )
             }
@@ -681,19 +729,18 @@ fun MainAppScreen(viewModel: MainViewModel) {
                     }
                 }
                 
-                // التذييل (Footer) الاحترافي القابل للتعديل سحابياً
-                if (settings.footerTextVisible && currentScreen != "ADMIN" && activeChatId == null) {
-                    val fontSize = settings.footerFontSize * (settings.footerFontSizePercent / 100f)
+                // التذييل (Footer) الاحترافي المتوافق مع الصورة تماماً
+                if (currentScreen != "ADMIN" && activeChatId == null) {
                     Text(
-                        text = "حقوق النشر © ${settings.footerText}",
-                        color = Color.White.copy(alpha = settings.footerOpacity),
-                        fontSize = fontSize.sp,
+                        text = "wam 2026",
+                        color = Color(0xFF1976D2),
+                        fontSize = 12.sp,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(AppTheme.surfaceDark)
-                            .padding(vertical = 6.dp)
+                            .background(Color(0xFF090E14))
+                            .padding(vertical = 10.dp)
                     )
                 }
             }

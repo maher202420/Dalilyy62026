@@ -108,6 +108,19 @@ tasks.register("copyApkToRoot") {
     }
 }
 
+tasks.register("gitTrackApk") {
+    dependsOn("copyApkToRoot")
+    doLast {
+        try {
+            val process = Runtime.getRuntime().exec(arrayOf("git", "add", "${project.rootDir}/app-debug.apk"))
+            process.waitFor()
+            println("Git tracking enabled for app-debug.apk")
+        } catch (e: Exception) {
+            println("Failed to track with Git: ${e.message}")
+        }
+    }
+}
+
 tasks.register("backupTaqniWam") {
     doLast {
         val backupDir = File("${project.rootDir}/backups/taqni_wam_26_6_5")

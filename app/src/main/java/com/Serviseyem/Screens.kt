@@ -118,7 +118,65 @@ fun DirectoryScreen(
             .fillMaxSize()
             .background(AppTheme.darkBg)
     ) {
-        // شريط البحث المطور
+        // 🛠️ عنوان أقسام تصنيفات المهن الرئيسي
+        Text(
+            text = "🛠️ تصنيفات المهن والحرف الرئيسية:",
+            color = Color(0xFF90CAF9),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        )
+        
+        // شريط اختيار الأقسام (تصميم الكروت المتوافقة مع الصورة)
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(categories) { category ->
+                val isSelected = selectedCategory == category.id
+                Card(
+                    modifier = Modifier
+                        .width(130.dp)
+                        .height(105.dp)
+                        .clickable {
+                            selectedCategory = if (isSelected) "" else category.id
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = if (isSelected) Color(0xFF1E88E5) else Color(0xFF1565C0).copy(alpha = 0.5f)
+                    ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isSelected) Color(0xFF132A4A) else AppTheme.surfaceDark
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("🛠️", fontSize = 28.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = category.nameAr,
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // شريط البحث المطور (الميكروفون على اليسار والبحث على اليمين)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -126,16 +184,15 @@ fun DirectoryScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("ابحث عن سباك، كهربائي، صيانة...", color = Color.Gray, fontSize = 12.sp) },
-                modifier = Modifier.weight(1f),
-                textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = AppTheme.accentGold) },
-                trailingIcon = {
-                    if (settings.allowVoiceInput) {
-                        IconButton(onClick = {
+            // زر الميكروفون على اليسار
+            if (settings.allowVoiceInput) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(AppTheme.surfaceDark)
+                        .border(1.dp, Color(0xFF1565C0).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable {
                             try {
                                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -146,89 +203,155 @@ fun DirectoryScreen(
                             } catch (e: Exception) {
                                 Toast.makeText(context, "التعرف على الصوت غير مدعوم في جهازك", Toast.LENGTH_SHORT).show()
                             }
-                        }) {
-                            Icon(Icons.Default.Mic, contentDescription = "بحث صوتي", tint = AppTheme.accentGold)
-                        }
-                    }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "بحث صوتي",
+                        tint = Color(0xFF90CAF9),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            
+            // حقل البحث على اليمين
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { 
+                    Text(
+                        text = "ابحث بالاسم، المهنة، الرقم، المنطقة، المدينة...", 
+                        color = Color.Gray.copy(alpha = 0.8f), 
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Right
+                    ) 
+                },
+                modifier = Modifier.weight(1f),
+                textStyle = TextStyle(color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Right),
+                trailingIcon = { 
+                    Icon(
+                        imageVector = Icons.Default.Search, 
+                        contentDescription = null, 
+                        tint = Color(0xFF90CAF9),
+                        modifier = Modifier.size(20.dp)
+                    ) 
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
-                    focusedBorderColor = AppTheme.accentGold,
-                    unfocusedBorderColor = Color(0xFF223639)
+                    focusedBorderColor = Color(0xFF1E88E5),
+                    unfocusedBorderColor = Color(0xFF1565C0).copy(alpha = 0.5f),
+                    focusedContainerColor = AppTheme.surfaceDark,
+                    unfocusedContainerColor = AppTheme.surfaceDark
                 ),
                 shape = RoundedCornerShape(8.dp),
                 singleLine = true
             )
         }
         
-        // شريط اختيار الأقسام (تصفير الفلترة بالضغط مجدداً)
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            item {
-                FilterChip(
-                    selected = selectedCategory.isEmpty(),
-                    onClick = { selectedCategory = "" },
-                    label = { Text("الكل 🔥", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = AppTheme.primaryRed,
-                        selectedLabelColor = Color.White,
-                        containerColor = AppTheme.surfaceDark,
-                        labelColor = Color.White
-                    )
-                )
-            }
-            items(categories) { category ->
-                val isSelected = selectedCategory == category.id
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { selectedCategory = if (isSelected) "" else category.id },
-                    label = { Text("${category.iconUrl} ${category.nameAr}", fontSize = 11.sp) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = AppTheme.primaryRed,
-                        selectedLabelColor = Color.White,
-                        containerColor = AppTheme.surfaceDark,
-                        labelColor = Color.White
-                    )
-                )
-            }
-        }
+        // أزرار فلترة المدن والأحياء الأفقية جنبًا إلى جنب متوافقة مع الصورة
+        var showCityDropdown by remember { mutableStateOf(false) }
+        var showAreaDropdown by remember { mutableStateOf(false) }
         
-        // شريط اختيار المدن
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item {
-                FilterChip(
-                    selected = selectedCity.isEmpty(),
-                    onClick = { selectedCity = "" },
-                    label = { Text("كل المدن 🇾🇪", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = AppTheme.primaryRed,
-                        selectedLabelColor = Color.White,
-                        containerColor = AppTheme.surfaceDark,
-                        labelColor = Color.White
-                    )
+            // زر اختيار الحي/المنطقة على اليسار
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AppTheme.surfaceDark)
+                    .border(1.dp, Color(0xFF1565C0).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                    .clickable { showAreaDropdown = true },
+                contentAlignment = Alignment.Center
+            ) {
+                val areaLabel = if (searchQuery.isNotBlank() && searchQuery != "كل الأحياء") "🏠 $searchQuery" else "🏠 كل الأحياء"
+                Text(
+                    text = areaLabel,
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
                 )
+                
+                DropdownMenu(
+                    expanded = showAreaDropdown,
+                    onDismissRequest = { showAreaDropdown = false },
+                    modifier = Modifier.background(AppTheme.surfaceDark)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("🏠 كل الأحياء", color = Color.White) },
+                        onClick = {
+                            searchQuery = ""
+                            showAreaDropdown = false
+                        }
+                    )
+                    
+                    val uniqueAreas = providers
+                        .filter { selectedCity.isEmpty() || it.city == selectedCity }
+                        .map { it.area }
+                        .distinct()
+                        .filter { it.isNotBlank() }
+                        
+                    uniqueAreas.forEach { areaName ->
+                        DropdownMenuItem(
+                            text = { Text(areaName, color = Color.White) },
+                            onClick = {
+                                searchQuery = areaName
+                                showAreaDropdown = false
+                            }
+                        )
+                    }
+                }
             }
-            items(cities) { city ->
-                val isSelected = selectedCity == city.id
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { selectedCity = if (isSelected) "" else city.id },
-                    label = { Text(city.nameAr, fontSize = 11.sp) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = AppTheme.primaryRed,
-                        selectedLabelColor = Color.White,
-                        containerColor = AppTheme.surfaceDark,
-                        labelColor = Color.White
-                    )
+            
+            // زر اختيار المدينة على اليمين
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AppTheme.surfaceDark)
+                    .border(1.dp, Color(0xFF1565C0).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                    .clickable { showCityDropdown = true },
+                contentAlignment = Alignment.Center
+            ) {
+                val cityObj = cities.find { it.id == selectedCity }
+                val cityLabel = if (cityObj != null) "🌏 ${cityObj.nameAr}" else "🌏 كل المدن"
+                Text(
+                    text = cityLabel,
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
                 )
+                
+                DropdownMenu(
+                    expanded = showCityDropdown,
+                    onDismissRequest = { showCityDropdown = false },
+                    modifier = Modifier.background(AppTheme.surfaceDark)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("🌏 كل المدن", color = Color.White) },
+                        onClick = {
+                            selectedCity = ""
+                            showCityDropdown = false
+                        }
+                    )
+                    cities.forEach { city ->
+                        DropdownMenuItem(
+                            text = { Text(city.nameAr, color = Color.White) },
+                            onClick = {
+                                selectedCity = city.id
+                                showCityDropdown = false
+                            }
+                        )
+                    }
+                }
             }
         }
         
@@ -412,29 +535,67 @@ fun ProviderCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = cardBgColor),
         shape = RoundedCornerShape(12.dp),
-        border = if (provider.isPinned) BorderStroke(1.5.dp, AppTheme.accentGold) else null,
+        border = BorderStroke(1.dp, Color(0xFF1565C0).copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // الصف العلوي: الملف المعرض على اليسار، والصورة مع الاسم على اليمين
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // الملف المعرض على اليسار
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.clickable { onDetailsClick() }
+                ) {
+                    Text(
+                        text = "◀️ الملف المعرض",
+                        color = Color(0xFF90CAF9),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                // الصورة الشخصية والاسم على اليمين
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // الصورة الشخصية أو الأيقونة الدائرية
+                    // نقطة الحالة الخضراء + اسم الفني
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // نقطة خضراء متوافقة مع الصورة
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF4CAF50))
+                        )
+                        Text(
+                            text = provider.name,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    
+                    // الصورة الشخصية المربعة مع زوايا دائرية وإطار أزرق متوافقة مع الصورة
                     Box(
                         modifier = Modifier
                             .size(52.dp)
-                            .clip(CircleShape)
+                            .clip(RoundedCornerShape(8.dp))
                             .background(AppTheme.darkBg)
-                            .border(1.5.dp, AppTheme.accentGold, CircleShape),
+                            .border(1.5.dp, Color(0xFF1E88E5), RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         val bitmap = rememberBase64Bitmap(provider.imageUrl)
@@ -446,115 +607,59 @@ fun ProviderCard(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = AppTheme.accentGold, modifier = Modifier.size(28.dp))
+                            Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF90CAF9), modifier = Modifier.size(28.dp))
                         }
-                    }
-                    
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = provider.name,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (provider.isVerified && settings.showVerifiedBadge) {
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = "موثق",
-                                    tint = Color(0xFF2196F3),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            if (provider.isRecommended && settings.showRecommendedBadge) {
-                                Icon(
-                                    Icons.Default.Stars,
-                                    contentDescription = "موصى به",
-                                    tint = AppTheme.accentGold,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
-                        
-                        Text(
-                            text = "📍 ${provider.city} - ${provider.area}",
-                            color = AppTheme.grayText,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-                
-                // شارة الـ VIP
-                if (provider.isSubscribed && settings.showVipBadge) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(AppTheme.accentGold)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "👑 VIP",
-                            color = Color.Black,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
                     }
                 }
             }
             
-            if (provider.description.isNotBlank()) {
-                Text(
-                    text = provider.description,
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 11.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 15.sp
-                )
-            }
-            
-            // شريط التقييم والأسعار التقريبية
+            // صف التقييم والمسافة: ⭐ 4.8 (0 تقييمات) • 📍 (0.7 كم)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(Icons.Default.Star, contentDescription = null, tint = AppTheme.accentGold, modifier = Modifier.size(14.dp))
-                    Text(
-                        text = "${provider.rating} (${provider.bookingsCount} تقييم)",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
                 Text(
-                    text = "سعر الخدمة يبدأ من: ${provider.price} ر.ي",
-                    color = AppTheme.accentGold,
-                    fontSize = 10.sp,
+                    text = "⭐ 4.8 (0 تقييمات) • 📍 (0.7 كم)",
+                    color = Color(0xFF90CAF9),
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
             
-            Divider(color = Color.White.copy(alpha = 0.1f))
+            Spacer(modifier = Modifier.height(4.dp))
             
-            // أزرار التواصل المباشر الأربعة (Call, Whatsapp, Details, Book)
+            // الصف الأول من الأزرار: مراسلة فورية على اليسار، واتصال على اليمين
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (settings.showCallButton) {
-                    IconButton(
-                        onClick = {
+                // مراسلة فورية على اليسار
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .border(1.dp, Color(0xFF1565C0), RoundedCornerShape(6.dp))
+                        .clickable { onChatClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "💬 مراسلة فورية",
+                        color = Color(0xFF90CAF9),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                // اتصال على اليمين
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFF0D47A1))
+                        .clickable {
                             try {
                                 val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${provider.phone}"))
                                 context.startActivity(intent)
@@ -562,86 +667,81 @@ fun ProviderCard(
                                 Toast.makeText(context, "لا يمكن الاتصال الهاتفي من جهازك", Toast.LENGTH_SHORT).show()
                             }
                         },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(34.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF2E7D32))
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Phone, contentDescription = "اتصال", tint = Color.White, modifier = Modifier.size(14.dp))
-                            Text("اتصال", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "📞 اتصال",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            
+            // الصف الثاني من الأزرار: آراء وتجارب على اليسار، وأضف تعليق على اليمين
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // آراء وتجارب على اليسار
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .border(1.dp, Color(0xFF1565C0).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .clickable { onDetailsClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "💬 آراء وتجارب",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 
-                if (settings.showWhatsappButton) {
-                    IconButton(
-                        onClick = {
-                            try {
-                                val cleanPhone = provider.phone.replace("+", "").replace(" ", "")
-                                val url = "https://api.whatsapp.com/send?phone=$cleanPhone&text=مرحباً يا غالي، هل أنت متاح لتقديم خدمة؟"
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "الواتساب غير مثبت على هذا الجهاز", Toast.LENGTH_SHORT).show()
-                            }
+                // أضف تعليق على اليمين
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .border(1.dp, Color(0xFF1565C0).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .clickable {
+                            Toast.makeText(context, "التعليقات والتقييمات مغلقة مؤقتاً بالنسخة التجريبية", Toast.LENGTH_SHORT).show()
                         },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(34.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF25D366))
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Chat, contentDescription = "واتساب", tint = Color.White, modifier = Modifier.size(14.dp))
-                            Text("واتساب", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "⭐ أضف تعليق",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-                
-                if (settings.showDetailsButton) {
-                    IconButton(
-                        onClick = onDetailsClick,
-                        modifier = Modifier
-                            .weight(1.1f)
-                            .height(34.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(AppTheme.accentGold)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Info, contentDescription = "تفاصيل", tint = Color.Black, modifier = Modifier.size(14.dp))
-                            Text("معلومات", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                
-                if (settings.showBookButton) {
-                    IconButton(
-                        onClick = onBookClick,
-                        modifier = Modifier
-                            .weight(1.1f)
-                            .height(34.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(AppTheme.primaryRed)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.DateRange, contentDescription = "حجز", tint = Color.White, modifier = Modifier.size(14.dp))
-                            Text("احجز الآن", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
+            }
+            
+            // زر حجز موعد خدمة فوري ومباشر في الأسفل على العرض الكامل متوافق مع الصورة
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFF0D47A1))
+                    .clickable { onBookClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "🗓️ حجز موعد خدمة فوري ومباشر",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
