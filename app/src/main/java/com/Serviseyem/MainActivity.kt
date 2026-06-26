@@ -401,6 +401,8 @@ fun MainAppScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val currentUserId by viewModel.currentUserId.collectAsStateWithLifecycle()
+    val notifications by viewModel.notifications.collectAsStateWithLifecycle()
+    val currentUserRole by viewModel.currentUserRole.collectAsStateWithLifecycle()
     
     var currentScreen by remember { mutableStateOf("DIRECTORY") } // DIRECTORY, MAPS, CHATS, JOIN, ABOUT, ADMIN
     var activeChatId by remember { mutableStateOf<String?>(null) }
@@ -487,9 +489,21 @@ fun MainAppScreen(viewModel: MainViewModel) {
                             )
                         }
                         
-                        // زر الإشعارات المتطابق تماماً (1 🔔)
-                        val unreadCount = viewModel.notifications.value.count { !it.isRead }
-                        val displayCount = if (unreadCount > 0) unreadCount else 1
+                        // زر الإشعارات المطور المفلتر بدقة (أمان وحساب حقيقي تبعا للهوية والدور)
+                        val myUnreadCount = remember(notifications, currentUserId, currentUserRole) {
+                            notifications.count { item ->
+                                val matchesUser = if (item.targetUserId.isNotBlank()) {
+                                    currentUserId != null && item.targetUserId == currentUserId
+                                } else {
+                                    val isAll = item.targetRole == "all" || item.targetRole.isBlank()
+                                    val isMyRole = (currentUserRole == "provider" && item.targetRole == "providers") ||
+                                                   (currentUserRole == "user" && item.targetRole == "users") ||
+                                                   ((currentUserRole == "admin" || currentUserRole == "admins") && item.targetRole == "admins")
+                                    isAll || isMyRole
+                                }
+                                matchesUser && !item.isRead
+                            }
+                        }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -501,7 +515,7 @@ fun MainAppScreen(viewModel: MainViewModel) {
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text(
-                                text = "$displayCount",
+                                text = "$myUnreadCount",
                                 color = Color(0xFF90CAF9),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold

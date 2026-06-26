@@ -600,19 +600,20 @@ class MainViewModel : ViewModel() {
     }
     
     fun approvePendingRequest(provider: Provider) {
-        _pendingRequests.value = _pendingRequests.value.filter { it.id != provider.id }
-        _providers.value = _providers.value + provider
+        val approvedProvider = provider.copy(isVerified = true)
+        _pendingRequests.value = _pendingRequests.value.filter { it.id != approvedProvider.id }
+        _providers.value = _providers.value + approvedProvider
         try {
-            firestore?.collection("pending_requests")?.document(provider.id)?.delete()
-            firestore?.collection("providers")?.document(provider.id)?.set(provider)
+            firestore?.collection("pending_requests")?.document(approvedProvider.id)?.delete()
+            firestore?.collection("providers")?.document(approvedProvider.id)?.set(approvedProvider)
             
             // إرسال إشعار فوري لمقدم الخدمة بأنه تم قبوله
-            if (provider.deviceId.isNotBlank()) {
+            if (approvedProvider.deviceId.isNotBlank()) {
                 val notification = Notification(
                     id = "notif_${System.currentTimeMillis()}",
                     title = "تهانينا! تم قبول طلب انضمامك 🛡️",
-                    body = "مرحباً ${provider.name}، لقد تم قبول طلب انضمامك كمهني معتمد في ${provider.city} ونشر حسابك بنجاح.",
-                    targetUserId = provider.deviceId,
+                    body = "مرحباً ${approvedProvider.name}، لقد تم قبول طلب انضمامك كمهني معتمد في ${approvedProvider.city} ونشر حسابك بنجاح.",
+                    targetUserId = approvedProvider.deviceId,
                     targetRole = "providers",
                     timestamp = System.currentTimeMillis(),
                     isRead = false,

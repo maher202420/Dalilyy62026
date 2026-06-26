@@ -100,18 +100,32 @@ fun DirectoryScreen(
         }
     }
     
-    val filteredProviders = providers.filter { provider ->
-        val matchesSearch = provider.name.contains(searchQuery, ignoreCase = true) || 
-                            provider.description.contains(searchQuery, ignoreCase = true) ||
-                            provider.area.contains(searchQuery, ignoreCase = true)
-        val matchesCategory = selectedCategory.isEmpty() || provider.category == selectedCategory
-        val matchesCity = selectedCity.isEmpty() || provider.city == selectedCity
-        provider.isVerified && matchesSearch && matchesCategory && matchesCity
-    }.sortedWith(
-        compareByDescending<Provider> { it.isPinned }
-            .thenByDescending { it.isSubscribed }
-            .thenByDescending { it.rating }
-    )
+    val filteredProviders = remember(providers, searchQuery, selectedCategory, selectedCity, categories, cities) {
+        providers.filter { provider ->
+            val cityObj = cities.find { it.id == provider.city }
+            val cityAr = cityObj?.nameAr ?: ""
+            val categoryObj = categories.find { it.id == provider.category }
+            val categoryAr = categoryObj?.nameAr ?: ""
+            
+            val matchesSearch = searchQuery.isBlank() || 
+                                provider.name.contains(searchQuery, ignoreCase = true) || 
+                                provider.phone.contains(searchQuery, ignoreCase = true) ||
+                                provider.area.contains(searchQuery, ignoreCase = true) ||
+                                provider.description.contains(searchQuery, ignoreCase = true) ||
+                                provider.city.contains(searchQuery, ignoreCase = true) ||
+                                provider.category.contains(searchQuery, ignoreCase = true) ||
+                                cityAr.contains(searchQuery, ignoreCase = true) ||
+                                categoryAr.contains(searchQuery, ignoreCase = true)
+            
+            val matchesCategory = selectedCategory.isEmpty() || provider.category == selectedCategory
+            val matchesCity = selectedCity.isEmpty() || provider.city == selectedCity
+            provider.isVerified && matchesSearch && matchesCategory && matchesCity
+        }.sortedWith(
+            compareByDescending<Provider> { it.isPinned }
+                .thenByDescending { it.isSubscribed }
+                .thenByDescending { it.rating }
+        )
+    }
     
     Column(
         modifier = Modifier
@@ -197,6 +211,9 @@ fun DirectoryScreen(
                                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                    putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                    putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                     putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث الآن للبحث عن فني...")
                                 }
                                 speechLauncher.launch(intent)
@@ -834,6 +851,9 @@ fun BookingDialog(
                                     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                         putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث باسم العميل...")
                                     }
                                     speechLauncher.launch(intent)
@@ -867,6 +887,9 @@ fun BookingDialog(
                                     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                         putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث برقم هاتفك...")
                                     }
                                     speechLauncher.launch(intent)
@@ -991,6 +1014,9 @@ fun BookingDialog(
                                     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                         putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث بالوقت المفضل...")
                                     }
                                     speechLauncher.launch(intent)
@@ -1026,6 +1052,9 @@ fun BookingDialog(
                                     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                         putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث بتفاصيل المشكلة...")
                                     }
                                     speechLauncher.launch(intent)
@@ -1061,6 +1090,9 @@ fun BookingDialog(
                                     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                         putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                        putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                         putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث بملاحظات إضافية...")
                                     }
                                     speechLauncher.launch(intent)
@@ -1408,8 +1440,13 @@ fun MapScreen(viewModel: MainViewModel) {
     var showBookingDialogForProvider by remember { mutableStateOf<Provider?>(null) }
     
     // تصفية مزودي الخدمة للخرائط بناءً على المدينة، التخصص، والمسافة الجغرافية الافتراضية
-    val filteredProviders = remember(providers, searchQuery, selectedCityId, selectedCategoryId, selectedDistance) {
+    val filteredProviders = remember(providers, searchQuery, selectedCityId, selectedCategoryId, selectedDistance, categories, cities) {
         providers.filter { provider ->
+            val cityObj = cities.find { it.id == provider.city }
+            val cityAr = cityObj?.nameAr ?: ""
+            val categoryObj = categories.find { it.id == provider.category }
+            val categoryAr = categoryObj?.nameAr ?: ""
+
             val matchesCategory = selectedCategoryId.isBlank() || provider.category == selectedCategoryId
             val hash = kotlin.math.abs(provider.id.hashCode())
             val pctX = ((hash % 80) + 10) / 100f
@@ -1418,11 +1455,21 @@ fun MapScreen(viewModel: MainViewModel) {
             val maxDistance = selectedDistance.toFloatOrNull() ?: Float.MAX_VALUE
             val matchesDistance = distanceInKm <= maxDistance
             
+            val matchesSearch = searchQuery.isBlank() || 
+                                provider.name.contains(searchQuery, ignoreCase = true) || 
+                                provider.phone.contains(searchQuery, ignoreCase = true) ||
+                                provider.area.contains(searchQuery, ignoreCase = true) ||
+                                provider.description.contains(searchQuery, ignoreCase = true) ||
+                                provider.city.contains(searchQuery, ignoreCase = true) ||
+                                provider.category.contains(searchQuery, ignoreCase = true) ||
+                                cityAr.contains(searchQuery, ignoreCase = true) ||
+                                categoryAr.contains(searchQuery, ignoreCase = true)
+            
             provider.isVerified &&
             (selectedCityId.isBlank() || provider.city == selectedCityId) &&
             matchesCategory &&
             matchesDistance &&
-            (searchQuery.isBlank() || provider.name.contains(searchQuery, true) || provider.area.contains(searchQuery, true))
+            matchesSearch
         }
     }
     
@@ -2100,6 +2147,9 @@ fun ChatDetailScreen(
                                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                    putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                    putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                     putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث وسيترجم صوتك إلى نص...")
                                 }
                                 speechLauncher.launch(intent)
@@ -2478,6 +2528,9 @@ fun JoinScreen(viewModel: MainViewModel) {
                             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                 putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث بالاسم الكامل...")
                             }
                             speechLauncher.launch(intent)
@@ -2510,6 +2563,9 @@ fun JoinScreen(viewModel: MainViewModel) {
                             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                 putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث برقم الهاتف...")
                             }
                             speechLauncher.launch(intent)
@@ -2543,6 +2599,9 @@ fun JoinScreen(viewModel: MainViewModel) {
                             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                 putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث بالمنطقة السكنية...")
                             }
                             speechLauncher.launch(intent)
@@ -2577,6 +2636,9 @@ fun JoinScreen(viewModel: MainViewModel) {
                             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-YE")
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-YE")
+                                putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "ar-YE")
+                                putExtra("android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES", arrayOf("ar-YE", "ar"))
                                 putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث بنبذة عن مهاراتك...")
                             }
                             speechLauncher.launch(intent)
