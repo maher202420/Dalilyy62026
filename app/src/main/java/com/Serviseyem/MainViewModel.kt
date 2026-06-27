@@ -22,6 +22,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
+import org.json.JSONArray
+import org.json.JSONObject
 
 class MainViewModel : ViewModel() {
     
@@ -42,6 +44,8 @@ class MainViewModel : ViewModel() {
     
     private val _banners = MutableStateFlow<List<AppBanner>>(emptyList())
     val banners: StateFlow<List<AppBanner>> = _banners.asStateFlow()
+    
+    val appInstallTime = MutableStateFlow<Long>(0L)
     
     private val _bookings = MutableStateFlow<List<BookingRequest>>(emptyList())
     val bookings: StateFlow<List<BookingRequest>> = _bookings.asStateFlow()
@@ -120,7 +124,7 @@ class MainViewModel : ViewModel() {
                     val body = requestJson.toString().toRequestBody(mediaType)
                     
                     val request = Request.Builder()
-                        .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey")
+                        .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
                         .post(body)
                         .build()
                     
@@ -332,6 +336,14 @@ class MainViewModel : ViewModel() {
             userPrefs = context.getSharedPreferences("user_session", android.content.Context.MODE_PRIVATE)
             val savedUid = userPrefs?.getString("saved_uid", null)
             val savedRole = userPrefs?.getString("saved_role", "user") ?: "user"
+            
+            var installTime = userPrefs?.getLong("app_install_time", 0L) ?: 0L
+            if (installTime == 0L) {
+                installTime = System.currentTimeMillis()
+                userPrefs?.edit()?.putLong("app_install_time", installTime)?.apply()
+            }
+            appInstallTime.value = installTime
+            
             if (savedUid != null) {
                 currentUserId.value = savedUid
                 currentUserRole.value = savedRole
@@ -342,6 +354,7 @@ class MainViewModel : ViewModel() {
                 userPrefs?.edit()?.apply {
                     putString("saved_uid", newUid)
                     putString("saved_role", "user")
+                    putLong("app_install_time", installTime)
                     apply()
                 }
             }
@@ -600,7 +613,7 @@ class MainViewModel : ViewModel() {
     }
     
     fun approvePendingRequest(provider: Provider) {
-        val approvedProvider = provider.copy(isVerified = true)
+        val approvedProvider = provider.copy(isVerified = true, verified = true)
         _pendingRequests.value = _pendingRequests.value.filter { it.id != approvedProvider.id }
         _providers.value = _providers.value + approvedProvider
         try {
@@ -700,5 +713,191 @@ class MainViewModel : ViewModel() {
         }
         
         return true
+    }
+
+    fun purgeSelectedData(
+        password: String,
+        categories: Boolean,
+        providers: Boolean,
+        bookings: Boolean,
+        chats: Boolean,
+        banners: Boolean,
+        notifications: Boolean,
+        cities: Boolean
+    ): Boolean {
+        if (password != ADMIN_PASSWORD) return false
+        
+        viewModelScope.launch {
+            try {
+                val listToPurge = mutableListOf<String>()
+                if (providers) {
+                    listToPurge.add("providers")
+                    listToPurge.add("pending_requests")
+                }
+                if (categories) listToPurge.add("categories")
+                if (cities) listToPurge.add("cities")
+                if (bookings) listToPurge.add("bookings")
+                if (chats) {
+                    listToPurge.add("chats")
+                    listToPurge.add("messages")
+                }
+                if (notifications) listToPurge.add("notifications")
+                if (banners) listToPurge.add("banners")
+                
+                listToPurge.forEach { collectionName ->
+                    val snapshot = firestore?.collection(collectionName)?.get()?.await()
+                    snapshot?.documents?.forEach { doc ->
+                        doc.reference.delete().await()
+                    }
+                }
+                
+                // Reset local states
+                if (providers) {
+                    _providers.value = emptyList()
+                    _pendingRequests.value = emptyList()
+                }
+                if (categories) _categories.value = emptyList()
+                if (cities) _cities.value = emptyList()
+                if (bookings) _bookings.value = emptyList()
+                if (chats) {
+                    _chatRooms.value = emptyList()
+                    _chatMessages.value = emptyList()
+                }
+                if (notifications) _notifications.value = emptyList()
+                if (banners) _banners.value = emptyList()
+                
+            } catch (e: Exception) {}
+        }
+        return true
+    }
+
+    fun backupSelectedData(
+        categories: Boolean,
+        providers: Boolean,
+        bookings: Boolean,
+        chats: Boolean,
+        banners: Boolean,
+        notifications: Boolean,
+        cities: Boolean
+    ): String {
+        val backupObj = JSONObject()
+        try {
+            if (providers) {
+                val providersArray = JSONArray()
+                _providers.value.forEach { provider ->
+                    val pObj = JSONObject().apply {
+                        put("id", provider.id)
+                        put("name", provider.name)
+                        put("category", provider.category)
+                        put("city", provider.city)
+                        put("phone", provider.phone)
+                        put("description", provider.description)
+                        put("area", provider.area)
+                        put("rating", provider.rating)
+                        put("isVerified", provider.isVerified)
+                        put("isSubscribed", provider.isSubscribed)
+                        put("isPinned", provider.isPinned)
+                        put("isRecommended", provider.isRecommended)
+                    }
+                    providersArray.put(pObj)
+                }
+                backupObj.put("providers", providersArray)
+            }
+            
+            if (categories) {
+                val catsArray = JSONArray()
+                _categories.value.forEach { cat ->
+                    val cObj = JSONObject().apply {
+                        put("id", cat.id)
+                        put("nameAr", cat.nameAr)
+                        put("nameEn", cat.nameEn)
+                        put("iconUrl", cat.iconUrl)
+                    }
+                    catsArray.put(cObj)
+                }
+                backupObj.put("categories", catsArray)
+            }
+            
+            if (cities) {
+                val citiesArray = JSONArray()
+                _cities.value.forEach { city ->
+                    val cObj = JSONObject().apply {
+                        put("id", city.id)
+                        put("nameAr", city.nameAr)
+                        put("nameEn", city.nameEn)
+                    }
+                    citiesArray.put(cObj)
+                }
+                backupObj.put("cities", citiesArray)
+            }
+            
+            if (bookings) {
+                val bArray = JSONArray()
+                _bookings.value.forEach { b ->
+                    val bObj = JSONObject().apply {
+                        put("id", b.id)
+                        put("providerId", b.providerId)
+                        put("userId", b.userId)
+                        put("customerName", b.userName)
+                        put("customerPhone", b.phoneNumber)
+                        put("residenceArea", b.residenceArea)
+                        put("preferredTime", b.preferredTime)
+                        put("description", b.description)
+                        put("status", b.status)
+                        put("timestamp", b.timestamp)
+                    }
+                    bArray.put(bObj)
+                }
+                backupObj.put("bookings", bArray)
+            }
+            
+            if (chats) {
+                val chatsArray = JSONArray()
+                _chatRooms.value.forEach { room ->
+                    val rObj = JSONObject().apply {
+                        put("id", room.id)
+                        put("lastMessage", room.lastMessage)
+                        put("lastMessageTime", room.lastMessageTime)
+                        put("isActive", room.isActive)
+                    }
+                    chatsArray.put(rObj)
+                }
+                backupObj.put("chats", chatsArray)
+            }
+            
+            if (notifications) {
+                val notifsArray = JSONArray()
+                _notifications.value.forEach { n ->
+                    val nObj = JSONObject().apply {
+                        put("id", n.id)
+                        put("title", n.title)
+                        put("body", n.body)
+                        put("targetUserId", n.targetUserId)
+                        put("targetRole", n.targetRole)
+                        put("timestamp", n.timestamp)
+                        put("isRead", n.isRead)
+                        put("type", n.type)
+                    }
+                    notifsArray.put(nObj)
+                }
+                backupObj.put("notifications", notifsArray)
+            }
+            
+            if (banners) {
+                val bArray = JSONArray()
+                _banners.value.forEach { b ->
+                    val bObj = JSONObject().apply {
+                        put("id", b.id)
+                        put("imageUrl", b.mediaUrl)
+                        put("clickUrl", b.linkUrl)
+                        put("title", b.title)
+                    }
+                    bArray.put(bObj)
+                }
+                backupObj.put("banners", bArray)
+            }
+        } catch (e: Exception) {}
+        
+        return backupObj.toString(4)
     }
 }

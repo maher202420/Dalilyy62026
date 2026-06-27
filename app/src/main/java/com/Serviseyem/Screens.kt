@@ -119,10 +119,10 @@ fun DirectoryScreen(
             
             val matchesCategory = selectedCategory.isEmpty() || provider.category == selectedCategory
             val matchesCity = selectedCity.isEmpty() || provider.city == selectedCity
-            provider.isVerified && matchesSearch && matchesCategory && matchesCity
+            provider.isVerifiedApproved && matchesSearch && matchesCategory && matchesCity
         }.sortedWith(
-            compareByDescending<Provider> { it.isPinned }
-                .thenByDescending { it.isSubscribed }
+            compareByDescending<Provider> { it.isPinnedActive }
+                .thenByDescending { it.isSubscribedActive }
                 .thenByDescending { it.rating }
         )
     }
@@ -265,111 +265,6 @@ fun DirectoryScreen(
                 shape = RoundedCornerShape(8.dp),
                 singleLine = true
             )
-        }
-        
-        // أزرار فلترة المدن والأحياء الأفقية جنبًا إلى جنب متوافقة مع الصورة
-        var showCityDropdown by remember { mutableStateOf(false) }
-        var showAreaDropdown by remember { mutableStateOf(false) }
-        
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // زر اختيار الحي/المنطقة على اليسار
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(AppTheme.surfaceDark)
-                    .border(1.dp, Color(0xFF1565C0).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                    .clickable { showAreaDropdown = true },
-                contentAlignment = Alignment.Center
-            ) {
-                val areaLabel = if (searchQuery.isNotBlank() && searchQuery != "كل الأحياء") "🏠 $searchQuery" else "🏠 كل الأحياء"
-                Text(
-                    text = areaLabel,
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                DropdownMenu(
-                    expanded = showAreaDropdown,
-                    onDismissRequest = { showAreaDropdown = false },
-                    modifier = Modifier.background(AppTheme.surfaceDark)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("🏠 كل الأحياء", color = Color.White) },
-                        onClick = {
-                            searchQuery = ""
-                            showAreaDropdown = false
-                        }
-                    )
-                    
-                    val uniqueAreas = providers
-                        .filter { selectedCity.isEmpty() || it.city == selectedCity }
-                        .map { it.area }
-                        .distinct()
-                        .filter { it.isNotBlank() }
-                        
-                    uniqueAreas.forEach { areaName ->
-                        DropdownMenuItem(
-                            text = { Text(areaName, color = Color.White) },
-                            onClick = {
-                                searchQuery = areaName
-                                showAreaDropdown = false
-                            }
-                        )
-                    }
-                }
-            }
-            
-            // زر اختيار المدينة على اليمين
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(AppTheme.surfaceDark)
-                    .border(1.dp, Color(0xFF1565C0).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                    .clickable { showCityDropdown = true },
-                contentAlignment = Alignment.Center
-            ) {
-                val cityObj = cities.find { it.id == selectedCity }
-                val cityLabel = if (cityObj != null) "🌏 ${cityObj.nameAr}" else "🌏 كل المدن"
-                Text(
-                    text = cityLabel,
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                DropdownMenu(
-                    expanded = showCityDropdown,
-                    onDismissRequest = { showCityDropdown = false },
-                    modifier = Modifier.background(AppTheme.surfaceDark)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("🌏 كل المدن", color = Color.White) },
-                        onClick = {
-                            selectedCity = ""
-                            showCityDropdown = false
-                        }
-                    )
-                    cities.forEach { city ->
-                        DropdownMenuItem(
-                            text = { Text(city.nameAr, color = Color.White) },
-                            onClick = {
-                                selectedCity = city.id
-                                showCityDropdown = false
-                            }
-                        )
-                    }
-                }
-            }
         }
         
         // عرض البنرات الإعلانية المتحركة
@@ -1465,7 +1360,7 @@ fun MapScreen(viewModel: MainViewModel) {
                                 cityAr.contains(searchQuery, ignoreCase = true) ||
                                 categoryAr.contains(searchQuery, ignoreCase = true)
             
-            provider.isVerified &&
+            provider.isVerifiedApproved &&
             (selectedCityId.isBlank() || provider.city == selectedCityId) &&
             matchesCategory &&
             matchesDistance &&
@@ -3194,21 +3089,26 @@ fun NotificationCenterDialog(
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val currentUserId by viewModel.currentUserId.collectAsStateWithLifecycle()
     val currentUserRole by viewModel.currentUserRole.collectAsStateWithLifecycle()
+    val appInstallTime by viewModel.appInstallTime.collectAsStateWithLifecycle()
     
-    // تصفية الإشعارات لضمان الخصوصية والسرية والأمان التام
-    val filteredNotifications = remember(notifications, currentUserId, currentUserRole) {
+    // تصفية الإشعارات لضمان الخصوصية والسرية والأمان التام ومنع أي إشعارات وهمية
+    val filteredNotifications = remember(notifications, currentUserId, currentUserRole, appInstallTime) {
         notifications.filter { item ->
-            if (item.targetUserId.isNotBlank()) {
-                // إذا كان الإشعار موجه لمستخدم محدد بالـ ID
-                currentUserId != null && item.targetUserId == currentUserId
-            } else {
-                // إذا كان الإشعار عاماً لفئة معينة
-                val isAll = item.targetRole == "all" || item.targetRole.isBlank()
-                val isMyRole = (currentUserRole == "provider" && item.targetRole == "providers") ||
-                               (currentUserRole == "user" && item.targetRole == "users") ||
-                               ((currentUserRole == "admin" || currentUserRole == "admins") && item.targetRole == "admins")
-                isAll || isMyRole
+            if (currentUserId == null) return@filter false
+            
+            // عدم إظهار الإشعارات السابقة لتثبيت التطبيق لمنع ظهور إشعارات قديمة أو وهمية
+            val isAfterInstall = (currentUserRole == "admin" || currentUserRole == "admins" || item.timestamp >= appInstallTime)
+            if (!isAfterInstall) return@filter false
+            
+            val isForMe = (item.targetUserId == currentUserId)
+            val isForMyRole = when (currentUserRole) {
+                "admin", "admins" -> item.targetRole == "admins"
+                "provider", "providers" -> item.targetRole == "providers" || item.targetRole == "all"
+                "user", "users" -> item.targetRole == "users" || item.targetRole == "all"
+                else -> item.targetRole == "all"
             }
+            
+            isForMe || (item.targetUserId.isBlank() && isForMyRole && item.targetRole.isNotBlank())
         }
     }
     

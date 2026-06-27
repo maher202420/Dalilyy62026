@@ -1,6 +1,7 @@
 package com.Serviseyem.models
 
 import kotlinx.serialization.Serializable
+import com.google.firebase.firestore.PropertyName
 
 // ============================================================
 // 🔐 البيانات الأمنية
@@ -19,18 +20,45 @@ data class Provider(
     val description: String = "",
     val area: String = "",
     val rating: Double = 0.0,
+    
+    @get:PropertyName("isVerified")
     val isVerified: Boolean = false,
+    
+    @get:PropertyName("isPinned")
     val isPinned: Boolean = false,
+    
+    @get:PropertyName("isRecommended")
     val isRecommended: Boolean = false,
+    
+    @get:PropertyName("isSubscribed")
     val isSubscribed: Boolean = false,
+    
     val deviceId: String = "",
     val imageUrl: String = "",
     val portfolioImages: List<String> = emptyList(),
     val orderPriority: Int = 0,
     val bookingsCount: Int = 0,
     val price: String = "0",
-    val idCardBase64: String = ""
-)
+    val idCardBase64: String = "",
+    
+    // توافقية إضافية مع الأسماء التي ينتجها فايربيس تلقائياً عند إرسال بوليان يبدأ بـ is
+    val verified: Boolean = false,
+    val pinned: Boolean = false,
+    val recommended: Boolean = false,
+    val subscribed: Boolean = false
+) {
+    val isVerifiedApproved: Boolean
+        get() = isVerified || verified
+
+    val isPinnedActive: Boolean
+        get() = isPinned || pinned
+
+    val isRecommendedActive: Boolean
+        get() = isRecommended || recommended
+
+    val isSubscribedActive: Boolean
+        get() = isSubscribed || subscribed
+}
 
 @Serializable
 data class BookingRequest(
@@ -78,6 +106,7 @@ data class Notification(
     val targetUserId: String = "",
     val targetRole: String = "all", // all, users, providers, admins
     val timestamp: Long = System.currentTimeMillis(),
+    @get:PropertyName("isRead")
     val isRead: Boolean = false,
     val type: String = "info"
 )
@@ -150,6 +179,7 @@ data class AppSettings(
     val aboutShareUrlVisible: Boolean = true,
     val aboutImageVisible: Boolean = true,
     val adminPassword: String = ADMIN_PASSWORD,
+    @get:PropertyName("isChatEnabled")
     val isChatEnabled: Boolean = true,
     val chatDisabledMessage: String = "خدمة الدردشة متوقفة حالياً للصيانة، نعتذر عن الإزعاج",
     val chatIconSize: Int = 56,

@@ -492,14 +492,26 @@ fun MainAppScreen(viewModel: MainViewModel) {
                         // زر الإشعارات المطور المفلتر بدقة (أمان وحساب حقيقي تبعا للهوية والدور)
                         val myUnreadCount = remember(notifications, currentUserId, currentUserRole) {
                             notifications.count { item ->
-                                val matchesUser = if (item.targetUserId.isNotBlank()) {
-                                    currentUserId != null && item.targetUserId == currentUserId
+                                val isPersonal = item.title.contains("حجز") || item.body.contains("حجز") ||
+                                                 item.title.contains("انضمام") || item.body.contains("انضمام") ||
+                                                 item.title.contains("طلب") || item.body.contains("طلب") ||
+                                                 item.body.contains("ياسين") || item.body.contains("النجار") ||
+                                                 item.body.contains("الغرباني") || item.body.contains("أمين")
+                                
+                                val matchesUser = if (isPersonal) {
+                                    val isForMe = (currentUserId != null && item.targetUserId == currentUserId)
+                                    val isForAdmin = ((currentUserRole == "admin" || currentUserRole == "admins") && item.targetRole == "admins")
+                                    isForMe || isForAdmin
                                 } else {
-                                    val isAll = item.targetRole == "all" || item.targetRole.isBlank()
-                                    val isMyRole = (currentUserRole == "provider" && item.targetRole == "providers") ||
-                                                   (currentUserRole == "user" && item.targetRole == "users") ||
-                                                   ((currentUserRole == "admin" || currentUserRole == "admins") && item.targetRole == "admins")
-                                    isAll || isMyRole
+                                    if (item.targetUserId.isNotBlank()) {
+                                        currentUserId != null && item.targetUserId == currentUserId
+                                    } else {
+                                        val isAll = item.targetRole == "all" || item.targetRole.isBlank()
+                                        val isMyRole = (currentUserRole == "provider" && item.targetRole == "providers") ||
+                                                       (currentUserRole == "user" && item.targetRole == "users") ||
+                                                       ((currentUserRole == "admin" || currentUserRole == "admins") && item.targetRole == "admins")
+                                        isAll || isMyRole
+                                    }
                                 }
                                 matchesUser && !item.isRead
                             }

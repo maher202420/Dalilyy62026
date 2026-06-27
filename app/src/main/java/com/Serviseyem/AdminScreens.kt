@@ -281,9 +281,7 @@ fun AdminDashboardScreen(viewModel: MainViewModel) {
                 12 -> ThemeColorsTab(viewModel)
                 13 -> NotificationsTab(viewModel, notifications)
                 14 -> BookingsTab(viewModel, bookings)
-                15 -> PurgeTab(viewModel, showPurgeDialog, purgePassword, purgeError) {
-                    showPurgeDialog = true
-                }
+                15 -> PurgeTab(viewModel)
             }
         }
     }
@@ -375,8 +373,8 @@ fun AdminStatsTab(viewModel: MainViewModel) {
     val bookings by viewModel.bookings.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     
-    val activeProviders = providers.count { it.isVerified }
-    val pendingCount = providers.count { !it.isVerified }
+    val activeProviders = providers.count { it.isVerifiedApproved }
+    val pendingCount = providers.count { !it.isVerifiedApproved }
     val bookingsCount = bookings.size
     val pendingBookings = bookings.count { it.status == "pending" }
     
@@ -976,9 +974,13 @@ fun AddProviderTab(viewModel: MainViewModel) {
                             category = selectedCategory,
                             city = selectedCity,
                             isVerified = true,
+                            verified = true,
                             isSubscribed = isSubscribed,
+                            subscribed = isSubscribed,
                             isPinned = isPinned,
-                            isRecommended = isRecommended
+                            pinned = isPinned,
+                            isRecommended = isRecommended,
+                            recommended = isRecommended
                         )
                         viewModel.addProvider(provider)
                         Toast.makeText(context, "✅ تم إضافة ${provider.name} بنجاح", Toast.LENGTH_SHORT).show()
@@ -2352,7 +2354,7 @@ fun ProvidersListTab(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
-                            if (provider.isVerified) {
+                            if (provider.isVerifiedApproved) {
                                 Icon(
                                     Icons.Default.CheckCircle,
                                     contentDescription = "موثق",
@@ -2360,7 +2362,7 @@ fun ProvidersListTab(
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
-                            if (provider.isRecommended) {
+                            if (provider.isRecommendedActive) {
                                 Icon(
                                     Icons.Default.Star,
                                     contentDescription = "موصى به",
@@ -2368,7 +2370,7 @@ fun ProvidersListTab(
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
-                            if (provider.isSubscribed) {
+                            if (provider.isSubscribedActive) {
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(4.dp))
@@ -2467,9 +2469,9 @@ fun SubscriptionsTab(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
-                                checked = provider.isSubscribed,
+                                checked = provider.isSubscribedActive,
                                 onCheckedChange = {
-                                    val updated = provider.copy(isSubscribed = it)
+                                    val updated = provider.copy(isSubscribed = it, subscribed = it)
                                     viewModel.updateProvider(updated)
                                     Toast.makeText(context, "✅ تم تعديل الاشتراك", Toast.LENGTH_SHORT).show()
                                 }
@@ -2479,9 +2481,9 @@ fun SubscriptionsTab(
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
-                                checked = provider.isPinned,
+                                checked = provider.isPinnedActive,
                                 onCheckedChange = {
-                                    val updated = provider.copy(isPinned = it)
+                                    val updated = provider.copy(isPinned = it, pinned = it)
                                     viewModel.updateProvider(updated)
                                     Toast.makeText(context, "✅ تم تعديل التثبيت", Toast.LENGTH_SHORT).show()
                                 }
@@ -2491,9 +2493,9 @@ fun SubscriptionsTab(
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
-                                checked = provider.isRecommended,
+                                checked = provider.isRecommendedActive,
                                 onCheckedChange = {
-                                    val updated = provider.copy(isRecommended = it)
+                                    val updated = provider.copy(isRecommended = it, recommended = it)
                                     viewModel.updateProvider(updated)
                                     Toast.makeText(context, "✅ تم تعديل التوصية", Toast.LENGTH_SHORT).show()
                                 }
@@ -3185,55 +3187,289 @@ fun BookingsTab(
 // 🧹 تبويب التطهير
 // ============================================================
 @Composable
-fun PurgeTab(
-    viewModel: MainViewModel,
-    showDialog: Boolean,
-    password: String,
-    error: Boolean,
-    onPurgeClick: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = AppTheme.surfaceDark),
-        border = BorderStroke(2.dp, AppTheme.primaryRed),
-        shape = RoundedCornerShape(12.dp),
+fun PurgeTab(viewModel: MainViewModel) {
+    val context = LocalContext.current
+    
+    var categoriesSelected by remember { mutableStateOf(true) }
+    var providersSelected by remember { mutableStateOf(true) }
+    var bookingsSelected by remember { mutableStateOf(true) }
+    var chatsSelected by remember { mutableStateOf(true) }
+    var bannersSelected by remember { mutableStateOf(true) }
+    var notificationsSelected by remember { mutableStateOf(true) }
+    var citiesSelected by remember { mutableStateOf(true) }
+    
+    var showConfirmPurgeDialog by remember { mutableStateOf(false) }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf(false) }
+    
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = AppTheme.surfaceDark),
+            border = BorderStroke(2.dp, AppTheme.primaryRed),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = null,
-                tint = AppTheme.primaryRed,
-                modifier = Modifier.size(48.dp)
-            )
-            
-            Text(
-                text = "⚠️ تطهير قواعد البيانات",
-                color = AppTheme.primaryRed,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Button(
-                onClick = onPurgeClick,
-                colors = ButtonDefaults.buttonColors(containerColor = AppTheme.primaryRed),
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = AppTheme.primaryRed,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Text(
+                        text = "⚙️ إدارة وتهيئة قواعد البيانات السحابية",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
                 Text(
-                    text = "🧹 تطهير البيانات والبدء من جديد",
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
+                    text = "حدد أنواع البيانات التي تريد تهيئتها أو عمل نسخة احتياطية لها إلى ذاكرة الهاتف المحلي:",
+                    color = Color.Gray,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp
                 )
+                
+                Divider(color = Color.Gray.copy(alpha = 0.2f))
+                
+                // خيارات تحديد نوع البيانات
+                val dataTypes = listOf(
+                    Triple("💼 الأقسام والتصنيفات الرئيسية", categoriesSelected) { categoriesSelected = !categoriesSelected },
+                    Triple("👨‍🔧 أسماء ومزودي الخدمات الفنية", providersSelected) { providersSelected = !providersSelected },
+                    Triple("📅 طلبات الحجوزات المهنية", bookingsSelected) { bookingsSelected = !bookingsSelected },
+                    Triple("💬 غرف المحادثات والرسائل للعملاء", chatsSelected) { chatsSelected = !chatsSelected },
+                    Triple("📺 البنرات والملصقات الإعلانية", bannersSelected) { bannersSelected = !bannersSelected },
+                    Triple("🔔 سجل الإشعارات والتنبيهات المرسلة", notificationsSelected) { notificationsSelected = !notificationsSelected },
+                    Triple("📍 قائمة المحافظات والمدن اليمنية", citiesSelected) { citiesSelected = !citiesSelected }
+                )
+                
+                dataTypes.forEach { (label, isChecked, toggle) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { toggle() }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = label,
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Checkbox(
+                            checked = isChecked,
+                            onCheckedChange = { toggle() },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = AppTheme.primaryRed,
+                                uncheckedColor = Color.Gray
+                            )
+                        )
+                    }
+                }
+                
+                Divider(color = Color.Gray.copy(alpha = 0.2f))
+                
+                // زر تهيئة البيانات المحددة
+                Button(
+                    onClick = {
+                        if (!categoriesSelected && !providersSelected && !bookingsSelected && 
+                            !chatsSelected && !bannersSelected && !notificationsSelected && !citiesSelected) {
+                            Toast.makeText(context, "الرجاء تحديد نوع واحد من البيانات على الأقل!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            showConfirmPurgeDialog = true
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.primaryRed),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "🧹 تهيئة وحذف البيانات المحددة للصفر",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                // زر أخذ نسخة احتياطية للبيانات المحددة
+                Button(
+                    onClick = {
+                        if (!categoriesSelected && !providersSelected && !bookingsSelected && 
+                            !chatsSelected && !bannersSelected && !notificationsSelected && !citiesSelected) {
+                            Toast.makeText(context, "الرجاء تحديد نوع واحد من البيانات على الأقل للنسخ الاحتياطي!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            try {
+                                val backupJson = viewModel.backupSelectedData(
+                                    categories = categoriesSelected,
+                                    providers = providersSelected,
+                                    bookings = bookingsSelected,
+                                    chats = chatsSelected,
+                                    banners = bannersSelected,
+                                    notifications = notificationsSelected,
+                                    cities = citiesSelected
+                                )
+                                
+                                // محاولة الحفظ لمجلد التنزيلات Downloads بذاكرة الهاتف
+                                val fileName = "Serviseyem_Backup_${System.currentTimeMillis()}.json"
+                                var savedPath: String? = null
+                                try {
+                                    if (android.os.Environment.getExternalStorageState() == android.os.Environment.MEDIA_MOUNTED) {
+                                        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                                        if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                                        val file = java.io.File(downloadsDir, fileName)
+                                        file.writeText(backupJson)
+                                        savedPath = file.absolutePath
+                                    }
+                                } catch (fileEx: Exception) {
+                                    fileEx.printStackTrace()
+                                }
+                                
+                                // تشغيل ورقة المشاركة لتصدير الملف مباشرة أو نسخه
+                                val sendIntent = android.content.Intent().apply {
+                                    action = android.content.Intent.ACTION_SEND
+                                    putExtra(android.content.Intent.EXTRA_TEXT, backupJson)
+                                    type = "application/json"
+                                }
+                                val shareIntent = android.content.Intent.createChooser(sendIntent, "تصدير وحفظ النسخة الاحتياطية المهنية")
+                                context.startActivity(shareIntent)
+                                
+                                if (savedPath != null) {
+                                    Toast.makeText(context, "✅ تم حفظ النسخة الاحتياطية بنجاح في:\n$savedPath", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "✅ تم توليد النسخة الاحتياطية وجاهزة للمشاركة والحفظ!", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "❌ حدث خطأ أثناء النسخ الاحتياطي: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F9D58)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "💾 إنشاء نسخة احتياطية للبيانات المحددة",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
+    }
+    
+    // حوار تأكيد كلمة المرور للحذف والتطهير المدمر
+    if (showConfirmPurgeDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showConfirmPurgeDialog = false
+                confirmPassword = ""
+                passwordError = false
+            },
+            title = {
+                Text(
+                    text = "⚠️ تحذير أمني شديد الخطورة",
+                    color = AppTheme.primaryRed,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "أنت على وشك القيام بعملية تهيئة وتطهير وحذف كامل للبيانات المحددة من السيرفر السحابي نهائياً وبلا رجعة. هل أنت متأكد؟",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { 
+                            confirmPassword = it
+                            passwordError = false
+                        },
+                        label = { Text("أدخل كلمة مرور الأدمن للتأكيد", color = Color.Gray, fontSize = 11.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = TextStyle(color = Color.White, fontSize = 12.sp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = AppTheme.accentGold,
+                            unfocusedBorderColor = Color(0xFF223639)
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        visualTransformation = PasswordVisualTransformation()
+                    )
+                    if (passwordError) {
+                        Text(
+                            text = "❌ كلمة المرور المكتوبة غير صحيحة!",
+                            color = AppTheme.primaryRed,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val success = viewModel.purgeSelectedData(
+                            password = confirmPassword,
+                            categories = categoriesSelected,
+                            providers = providersSelected,
+                            bookings = bookingsSelected,
+                            chats = chatsSelected,
+                            banners = bannersSelected,
+                            notifications = notificationsSelected,
+                            cities = citiesSelected
+                        )
+                        if (success) {
+                            showConfirmPurgeDialog = false
+                            confirmPassword = ""
+                            passwordError = false
+                            Toast.makeText(context, "✅ تم تهيئة وتطهير كافة الحقول المحددة بنجاح!", Toast.LENGTH_LONG).show()
+                        } else {
+                            passwordError = true
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AppTheme.primaryRed)
+                ) {
+                    Text("نعم، تهيئة وحذف فوراً", color = Color.White, fontSize = 11.sp)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { 
+                        showConfirmPurgeDialog = false
+                        confirmPassword = ""
+                        passwordError = false
+                    }
+                ) {
+                    Text("إلغاء وتراجع", color = Color.White, fontSize = 11.sp)
+                }
+            },
+            containerColor = AppTheme.surfaceDark
+        )
     }
 }
 
@@ -3363,6 +3599,8 @@ fun BackdoorControlPanelDialog(
     var aboutEmail by remember { mutableStateOf(settings.aboutEmail) }
     var adminPassword by remember { mutableStateOf(settings.adminPassword) }
     var isChatEnabled by remember { mutableStateOf(settings.isChatEnabled) }
+    var allowVoiceInput by remember { mutableStateOf(settings.allowVoiceInput) }
+    var allowTextToSpeech by remember { mutableStateOf(settings.allowTextToSpeech) }
     var chatIconSize by remember { mutableStateOf(settings.chatIconSize.toFloat()) }
     var assistantIconSize by remember { mutableStateOf(settings.assistantIconSize.toFloat()) }
     var radiusSearchLimit by remember { mutableStateOf(settings.radiusSearchLimitKm.toFloat()) }
@@ -3421,6 +3659,58 @@ fun BackdoorControlPanelDialog(
                         shape = RoundedCornerShape(8.dp)
                     )
                     
+                    Text("⚙️ ميزات وخصائص التطبيق الإلكتروني:", color = AppTheme.accentGold, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("💬 تفعيل ميزة الدردشة والرسائل", color = Color.White, fontSize = 12.sp)
+                        Switch(
+                            checked = isChatEnabled,
+                            onCheckedChange = { isChatEnabled = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AppTheme.accentGold,
+                                checkedTrackColor = AppTheme.accentGold.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🎤 تفعيل ميزة الإدخال والبحث الصوتي", color = Color.White, fontSize = 12.sp)
+                        Switch(
+                            checked = allowVoiceInput,
+                            onCheckedChange = { allowVoiceInput = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AppTheme.accentGold,
+                                checkedTrackColor = AppTheme.accentGold.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🔊 تفعيل النطق الصوتي التلقائي", color = Color.White, fontSize = 12.sp)
+                        Switch(
+                            checked = allowTextToSpeech,
+                            onCheckedChange = { allowTextToSpeech = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AppTheme.accentGold,
+                                checkedTrackColor = AppTheme.accentGold.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                    
+                    Divider(color = Color.Gray.copy(alpha = 0.2f))
+                    
                     ColorPickerField(
                         label = "اللون الأساسي",
                         value = primaryHex,
@@ -3450,6 +3740,64 @@ fun BackdoorControlPanelDialog(
                         value = fontHex,
                         onValueChange = { fontHex = it }
                     )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "🔊 إعدادات الصوت والوسائط",
+                        color = AppTheme.accentGold,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { allowVoiceInput = !allowVoiceInput }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "🎤 تفعيل الإدخال الصوتي (Speech-To-Text)",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Switch(
+                            checked = allowVoiceInput,
+                            onCheckedChange = { allowVoiceInput = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AppTheme.accentGold,
+                                checkedTrackColor = AppTheme.accentGold.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { allowTextToSpeech = !allowTextToSpeech }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "🔊 تفعيل النطق الصوتي (Text-To-Speech)",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Switch(
+                            checked = allowTextToSpeech,
+                            onCheckedChange = { allowTextToSpeech = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AppTheme.accentGold,
+                                checkedTrackColor = AppTheme.accentGold.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -3473,6 +3821,8 @@ fun BackdoorControlPanelDialog(
                                 aboutEmail = aboutEmail,
                                 adminPassword = adminPassword,
                                 isChatEnabled = isChatEnabled,
+                                allowVoiceInput = allowVoiceInput,
+                                allowTextToSpeech = allowTextToSpeech,
                                 chatIconSize = chatIconSize.toInt(),
                                 assistantIconSize = assistantIconSize.toInt(),
                                 radiusSearchLimitKm = radiusSearchLimit.toInt()
