@@ -22,8 +22,8 @@ local.properties
 *.iml
 .DS_Store
 
-# Temporary batch sync - Batch 2 (Revealed: data, domain, di, security, sync, root kt files - Total: 116 files)
+# Temporary batch sync - Batch 3 (Revealed: utils + ui core/components/viewmodels/theme/dialogs - Total: 174 files)
 # Remaining ignored folders:
-app/src/main/java/com/serviseyem/ui/
-app/src/main/java/com/serviseyem/utils/
+app/src/main/java/com/serviseyem/ui/screens/
+
 
