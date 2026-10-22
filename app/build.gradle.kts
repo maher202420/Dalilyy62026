@@ -1,143 +1,220 @@
+import java.util.Properties
+import java.io.FileInputStream
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.gms.google-services")
+  alias(libs.plugins.android.application)
+  alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.secrets)
+  alias(libs.plugins.google.devtools.ksp)
+  alias(libs.plugins.hilt.android)
+  alias(libs.plugins.firebase.crashlytics)
+  // id("com.google.gms.google-services")
+  id("kotlin-parcelize")
 }
 
 android {
-    namespace = "com.Serviseyem"
-    compileSdk = 34
+  namespace = "com.serviseyem"
+  compileSdk = 36
 
-    defaultConfig {
-        applicationId = "com.Serviseyem"
-        minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+  defaultConfig {
+    applicationId = "com.serviseyem"
+    minSdk = 24
+    targetSdk = 35
+    versionCode = 5
+    versionName = "1.2.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    buildConfigField("String", "SIGNATURE_HASH", "\"\"")
+    buildConfigField("boolean", "IS_PAYMENT_ENABLED", "false")
+    val agoraProps = Properties()
+    val agoraPropsFile = rootProject.file("local.properties")
+    if (agoraPropsFile.exists()) {
+        agoraProps.load(FileInputStream(agoraPropsFile))
+    }
+    val agoraId = agoraProps.getProperty("AGORA_APP_ID") ?: System.getenv("AGORA_APP_ID") ?: ""
+    buildConfigField("String", "AGORA_APP_ID", "\"$agoraId\"")
+  }
+
+  signingConfigs {
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(FileInputStream(localPropertiesFile))
+    }
+
+    create("releaseConfig") {
+      val ksPath = System.getenv("KEYSTORE_PATH") ?: localProperties.getProperty("KEYSTORE_PATH") ?: "${rootDir}/my-release-key.jks"
+      val customKeystore = file(ksPath)
+      val releaseKeystore = file("${rootDir}/release.keystore")
+      val debugKeystore = file("${rootDir}/debug.keystore")
+      
+      val storePass: String? = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: System.getenv("STORE_PASSWORD") ?: localProperties.getProperty("RELEASE_KEYSTORE_PASSWORD")
+      val keyAl: String? = System.getenv("RELEASE_KEY_ALIAS") ?: System.getenv("KEY_ALIAS") ?: localProperties.getProperty("RELEASE_KEY_ALIAS")
+      val keyPass: String? = System.getenv("RELEASE_KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD") ?: localProperties.getProperty("RELEASE_KEY_PASSWORD")
+
+      if (customKeystore.exists() || releaseKeystore.exists()) {
+        if (storePass == null || keyAl == null || keyPass == null) {
+            throw GradleException("Release keystore passwords are not configured in local.properties or environment variables!")
         }
+        storeFile = if (customKeystore.exists()) customKeystore else releaseKeystore
+        storePassword = storePass
+        keyAlias = keyAl
+        keyPassword = keyPass
+      } else if (debugKeystore.exists()) {
+        storeFile = debugKeystore
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+      }
+    }
+    create("debugConfig") {
+      val debugKeystore = file("${rootDir}/debug.keystore")
+      if (debugKeystore.exists()) {
+        storeFile = debugKeystore
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+      }
+    }
+  }
 
-        val geminiKey = System.getenv("GEMINI_API_KEY") ?: ""
-        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
-    }
+  lint {
+    checkReleaseBuilds = false
+    abortOnError = false
+  }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
+  buildTypes {
+    release {
+      isCrunchPngs = true
+      isMinifyEnabled = false
+      isShrinkResources = false
+      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      signingConfig = signingConfigs.getByName("releaseConfig")
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+    debug {
+      isMinifyEnabled = false
+      signingConfig = signingConfigs.getByName("debugConfig")
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+  }
+  compileOptions {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+  }
+  buildFeatures {
+    compose = true
+    buildConfig = true
+  }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      all {
+        it.jvmArgs(
+          "-XX:+EnableDynamicAgentLoading",
+          "-Djdk.attach.allowAttachSelf=true"
+        )
+      }
     }
-    buildFeatures {
-        compose = true
-        buildConfig = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
+  }
 }
 
+// Configure the Secrets Gradle Plugin to use .env and .env.example files
+// to match the convention used in Web projects.
+secrets {
+  propertiesFileName = ".env"
+  defaultPropertiesFileName = ".env.example"
+}
+
+// Some unused dependencies are commented out below instead of being removed.
+// This makes it easy to add them back in the future if needed.
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
-
-    // Compose (Explicit Versions)
-    implementation("androidx.compose.ui:ui:1.5.4")
-    implementation("androidx.compose.ui:ui-graphics:1.5.4")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
-    implementation("androidx.compose.material3:material3:1.1.2")
-    implementation("androidx.compose.material:material-icons-extended:1.5.4")
-
-    // Coil
-    implementation("io.coil-kt:coil-compose:2.6.0")
-
-    // Networking & Serialization (Official Retrofit 2.11.0)
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-kotlinx-serialization:2.11.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
-
-    // Lifecycle compose
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-
-    // Firebase (Explicit Versions)
-    implementation("com.google.firebase:firebase-common:20.4.3")
-    implementation("com.google.firebase:firebase-firestore:24.10.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
-
-    // Tests
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.5.4")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.5.4")
+  implementation(platform(libs.androidx.compose.bom))
+  implementation("com.google.android.material:material:1.12.0")
+  implementation("androidx.fragment:fragment-ktx:1.8.6")
+  implementation(libs.androidx.security.crypto)
+  implementation(platform(libs.firebase.bom))
+  implementation(libs.accompanist.permissions)
+  implementation(libs.androidx.activity.compose)
+  implementation(libs.androidx.camera.camera2)
+  implementation(libs.androidx.camera.core)
+  implementation(libs.androidx.camera.lifecycle)
+  implementation(libs.androidx.camera.view)
+  implementation(libs.androidx.compose.material.icons.core)
+  implementation(libs.androidx.compose.material.icons.extended)
+  implementation(libs.androidx.compose.material3)
+  implementation(libs.androidx.compose.ui)
+  implementation(libs.androidx.compose.ui.graphics)
+  implementation(libs.androidx.compose.ui.tooling.preview)
+  implementation(libs.androidx.core.ktx)
+  implementation(libs.androidx.lifecycle.runtime.ktx)
+  implementation("androidx.core:core-splashscreen:1.0.1")
+  implementation(libs.hilt.android)
+  ksp(libs.hilt.compiler)
+  implementation(libs.androidx.hilt.navigation.compose)
+  implementation(libs.androidx.work.runtime.ktx)
+  implementation(libs.androidx.datastore.preferences)
+  implementation(libs.androidx.lifecycle.runtime.compose)
+  implementation(libs.androidx.lifecycle.runtime.ktx)
+  implementation(libs.androidx.lifecycle.viewmodel.compose)
+  implementation(libs.androidx.navigation.compose)
+  implementation(libs.androidx.room.ktx)
+  implementation(libs.androidx.room.runtime)
+  ksp(libs.androidx.room.compiler)
+  implementation(libs.coil.compose)
+  implementation(libs.converter.moshi)
+  // implementation(libs.firebase.ai)
+  implementation(libs.firebase.auth)
+  implementation(libs.firebase.appcheck)
+  implementation(libs.firebase.appcheck.playintegrity)
+  implementation(libs.firebase.appcheck.debug)
+  implementation(libs.firebase.firestore)
+  implementation("com.google.firebase:firebase-database")
+  implementation(libs.firebase.storage)
+  implementation(libs.firebase.messaging)
+  implementation("com.google.firebase:firebase-functions")
+  implementation(libs.firebase.crashlytics)
+  implementation("com.google.firebase:firebase-analytics")
+  implementation(libs.kotlinx.coroutines.android)
+  implementation(libs.kotlinx.coroutines.core)
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+  implementation(libs.logging.interceptor)
+  implementation(libs.moshi.kotlin)
+  implementation(libs.okhttp)
+  implementation(libs.play.services.location)
+  implementation(libs.retrofit)
+  testImplementation(libs.androidx.compose.ui.test.junit4)
+  testImplementation(libs.androidx.core)
+  testImplementation(libs.androidx.junit)
+  testImplementation(libs.junit)
+  testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(libs.mockk)
+  testImplementation(libs.turbine)
+  testImplementation(libs.robolectric)
+  testImplementation(libs.roborazzi)
+  testImplementation(libs.roborazzi.compose)
+  testImplementation(libs.roborazzi.junit.rule)
+  androidTestImplementation(platform(libs.androidx.compose.bom))
+  androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+  androidTestImplementation(libs.androidx.espresso.core)
+  androidTestImplementation(libs.androidx.junit)
+  androidTestImplementation(libs.androidx.runner)
+  debugImplementation(libs.androidx.compose.ui.test.manifest)
+  debugImplementation(libs.androidx.compose.ui.tooling)
 }
 
 tasks.register("copyApkToRoot") {
-    dependsOn("assembleDebug")
     doLast {
         val srcFile = file("${layout.buildDirectory.get().asFile}/outputs/apk/debug/app-debug.apk")
         val destFile = file("${project.rootDir}/app-debug.apk")
+        val buildOutputsDir = file("${project.rootDir}/.build-outputs")
+        buildOutputsDir.mkdirs()
+        val buildOutputsApk = file("${project.rootDir}/.build-outputs/app-debug.apk")
         if (srcFile.exists()) {
             srcFile.copyTo(destFile, overwrite = true)
-            println("APK copied successfully to ${destFile.absolutePath}")
-        } else {
-            error("Source APK not found at ${srcFile.absolutePath}")
+            srcFile.copyTo(buildOutputsApk, overwrite = true)
+            println("APK copied successfully to ${destFile.absolutePath} (Size: ${destFile.length()} bytes)")
         }
     }
 }
 
-tasks.register("gitTrackApk") {
-    dependsOn("copyApkToRoot")
-    doLast {
-        try {
-            val process = Runtime.getRuntime().exec(arrayOf("git", "add", "${project.rootDir}/app-debug.apk"))
-            process.waitFor()
-            println("Git tracking enabled for app-debug.apk")
-        } catch (e: Exception) {
-            println("Failed to track with Git: ${e.message}")
-        }
-    }
+afterEvaluate {
+    tasks.findByName("assembleDebug")?.finalizedBy("copyApkToRoot")
 }
-
-tasks.register("backupTaqniWam") {
-    doLast {
-        val backupDir = File("${project.rootDir}/backups/taqni_wam_26_6_5")
-        backupDir.deleteRecursively()
-        backupDir.mkdirs()
-        
-        // Copy Java/Kotlin Sources
-        val srcDir = File("${project.projectDir}/src/main/java/com/Serviseyem")
-        val destSrcDir = File(backupDir, "src")
-        srcDir.copyRecursively(destSrcDir, overwrite = true)
-        
-        // Copy build files
-        File("${project.projectDir}/build.gradle.kts").copyTo(File(backupDir, "app_build.gradle.kts"), overwrite = true)
-        File("${project.rootDir}/build.gradle.kts").copyTo(File(backupDir, "root_build.gradle.kts"), overwrite = true)
-        File("${project.rootDir}/settings.gradle.kts").copyTo(File(backupDir, "settings.gradle.kts"), overwrite = true)
-        
-        println("Backup created successfully at ${backupDir.absolutePath}")
-    }
-}
-

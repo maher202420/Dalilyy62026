@@ -1,0 +1,34 @@
+# Built application files
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Gradle files
+.gradle/
+build/
+app/build/
+.kotlin/
+.build-outputs/
+
+# Local configuration files
+local.properties
+.env
+.env.*
+!.env.example
+
+# IDE files
+.idea/
+*.iml
+.DS_Store
+
+# Temporary batch sync - Batch 1 (Configs, manifests & resources only)
+# Kotlin source folders hidden to keep sync under 180 files:
+app/src/main/java/com/serviseyem/ui/
+app/src/main/java/com/serviseyem/utils/
+app/src/main/java/com/serviseyem/data/
+app/src/main/java/com/serviseyem/domain/
+app/src/main/java/com/serviseyem/security/
+app/src/main/java/com/serviseyem/sync/
+app/src/main/java/com/serviseyem/di/
+app/src/main/java/com/serviseyem/*.kt
