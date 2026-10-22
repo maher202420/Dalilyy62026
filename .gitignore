@@ -22,13 +22,8 @@ local.properties
 *.iml
 .DS_Store
 
-# Temporary batch sync - Batch 1 (Configs, manifests & resources only)
-# Kotlin source folders hidden to keep sync under 180 files:
+# Temporary batch sync - Batch 2 (Revealed: data, domain, di, security, sync, root kt files - Total: 116 files)
+# Remaining ignored folders:
 app/src/main/java/com/serviseyem/ui/
 app/src/main/java/com/serviseyem/utils/
-app/src/main/java/com/serviseyem/data/
-app/src/main/java/com/serviseyem/domain/
-app/src/main/java/com/serviseyem/security/
-app/src/main/java/com/serviseyem/sync/
-app/src/main/java/com/serviseyem/di/
-app/src/main/java/com/serviseyem/*.kt
+
