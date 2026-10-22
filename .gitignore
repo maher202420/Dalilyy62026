@@ -22,18 +22,5 @@ local.properties
 *.iml
 .DS_Store
 
-# Temporary batch sync - Batch 4 (Revealed: dashboard, admin, register, about, payments, root screens - Total: 124 files)
-# Remaining ignored folders for Batch 5:
-app/src/main/java/com/serviseyem/ui/screens/map/
-app/src/main/java/com/serviseyem/ui/screens/chat/
-app/src/main/java/com/serviseyem/ui/screens/entities/
-app/src/main/java/com/serviseyem/ui/screens/home/
-app/src/main/java/com/serviseyem/ui/screens/bookings/
-app/src/main/java/com/serviseyem/ui/screens/urgent/
-app/src/main/java/com/serviseyem/ui/screens/notifications/
-app/src/main/java/com/serviseyem/ui/screens/status/
-app/src/main/java/com/serviseyem/ui/screens/owner/
-app/src/main/java/com/serviseyem/ui/screens/assistant/
-
 
 
