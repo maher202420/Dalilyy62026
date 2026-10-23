@@ -44,13 +44,7 @@ object FirebaseModule {
             ensureFirebaseInitialized(context)
         } catch (_: Throwable) {}
         val firestore = FirebaseFirestore.getInstance()
-        try {
-            val settings = FirebaseFirestoreSettings.Builder()
-                .setPersistenceEnabled(true)
-                .setCacheSizeBytes(100 * 1024 * 1024L)
-                .build()
-            firestore.firestoreSettings = settings
-        } catch (_: Throwable) {}
+        // Firestore persistence is disabled to rely purely on cloud sync.
         return firestore
     }
 

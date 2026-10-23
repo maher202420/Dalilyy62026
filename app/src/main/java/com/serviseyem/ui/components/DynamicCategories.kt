@@ -41,12 +41,12 @@ fun DynamicCategories(
 ) {
     val categories = listOf(
         CategoryFilterItem("ALL", "الكل", Icons.Default.Home, 120, Color(0xFF00E5FF)),
-        CategoryFilterItem("PROVIDERS", "فنيون ومهنيون", Icons.Default.Build, 45, Color(0xFF38BDF8)),
-        CategoryFilterItem("STORES", "متاجر وأسواق", Icons.Default.ShoppingCart, 32, Color(0xFF10B981)),
-        CategoryFilterItem("RESTAURANTS", "مطاعم وكافيهات", Icons.Default.Favorite, 28, Color(0xFFF59E0B)),
-        CategoryFilterItem("MEDICAL", "مراكز طبية", Icons.Default.Star, 19, Color(0xFF06B6D4)),
-        CategoryFilterItem("PROPERTIES", "عقارات وشقق", Icons.Default.Home, 15, Color(0xFF8B5CF6)),
-        CategoryFilterItem("JOBS", "وظائف شاغرة", Icons.Default.Person, 22, Color(0xFFEC4899))
+        CategoryFilterItem("PROVIDERS", "فنيون ومهنيون", Icons.Default.Engineering, 45, Color(0xFF38BDF8)),
+        CategoryFilterItem("STORES", "متاجر وأسواق", Icons.Default.Storefront, 32, Color(0xFF10B981)),
+        CategoryFilterItem("RESTAURANTS", "مطاعم وكافيهات", Icons.Default.Restaurant, 28, Color(0xFFF59E0B)),
+        CategoryFilterItem("MEDICAL", "مراكز طبية", Icons.Default.MedicalServices, 19, Color(0xFF06B6D4)),
+        CategoryFilterItem("PROPERTIES", "عقارات وشقق", Icons.Default.Apartment, 15, Color(0xFF8B5CF6)),
+        CategoryFilterItem("JOBS", "وظائف شاغرة", Icons.Default.Work, 22, Color(0xFFEC4899))
     )
 
     LazyRow(

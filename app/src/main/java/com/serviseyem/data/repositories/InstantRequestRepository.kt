@@ -2,8 +2,7 @@ package com.serviseyem.data.repositories
 
 import android.content.Context
 import android.util.Log
-import com.serviseyem.data.local.toEntity
-import com.serviseyem.data.local.toRoomEntity
+
 import com.serviseyem.data.models.InstantRequestEntity
 import com.serviseyem.data.models.RequestOfferEntity
 import com.serviseyem.security.BookingSecurityHelper
@@ -85,14 +84,6 @@ class InstantRequestRepository(private val context: Context? = null) {
                     current.removeAll { it.id == docId }
                     current.add(0, newEntity)
                     _requests.value = current
-                    context?.let { ctx ->
-                        repositoryScope.launch {
-                            try {
-                                com.serviseyem.data.local.AppDatabase.getInstance(ctx).requestDao()
-                                    .insertRequest(newEntity.toRoomEntity())
-                            } catch (_: Exception) {}
-                        }
-                    }
                     AnalyticsEventsHelper.logUrgentRequestCreated(context, docId, newEntity.categoryName.ifBlank { newEntity.serviceTitle })
                     onSuccess(newEntity)
                 }
@@ -109,19 +100,6 @@ class InstantRequestRepository(private val context: Context? = null) {
      * 2. تدفق حي لطلبات مستخدم معين (العميل)
      */
     fun getUserInstantRequests(userId: String): Flow<List<InstantRequestEntity>> = callbackFlow {
-        // Emit offline Room cache immediately
-        context?.let { ctx ->
-            repositoryScope.launch {
-                try {
-                    val local = com.serviseyem.data.local.AppDatabase.getInstance(ctx)
-                        .requestDao().getRequestsListForUser(userId).map { it.toEntity() }
-                    if (local.isNotEmpty()) {
-                        trySend(local)
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-
         val listener: ListenerRegistration = firestore.collection(AppConstants.COL_INSTANT_REQUESTS)
             .whereEqualTo("userId", userId)
             .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -140,14 +118,6 @@ class InstantRequestRepository(private val context: Context? = null) {
                     }
                 }
                 _requests.value = list
-                context?.let { ctx ->
-                    repositoryScope.launch {
-                        try {
-                            com.serviseyem.data.local.AppDatabase.getInstance(ctx).requestDao()
-                                .insertRequests(list.map { it.toRoomEntity() })
-                        } catch (_: Exception) {}
-                    }
-                }
                 trySend(list)
             }
 
@@ -262,14 +232,6 @@ class InstantRequestRepository(private val context: Context? = null) {
             transaction.set(topLevelOfferRef, finalOffer)
             transaction.update(requestRef, "offersCount", currentOffers + 1)
         }.addOnSuccessListener {
-            context?.let { ctx ->
-                repositoryScope.launch {
-                    try {
-                        com.serviseyem.data.local.AppDatabase.getInstance(ctx).offerDao()
-                            .insertOffer(finalOffer.toRoomEntity())
-                    } catch (_: Exception) {}
-                }
-            }
             AnalyticsEventsHelper.logOfferSubmitted(context, offer.requestId, offer.technicianId, offer.price)
             onSuccess()
         }.addOnFailureListener {
@@ -353,14 +315,6 @@ class InstantRequestRepository(private val context: Context? = null) {
                     acceptedTechnicianPhone = providerPhone,
                     acceptedPrice = acceptedPrice
                 ) else it
-            }
-            context?.let { ctx ->
-                repositoryScope.launch {
-                    try {
-                        com.serviseyem.data.local.AppDatabase.getInstance(ctx).requestDao()
-                            .updateRequestStatus(requestId, "ACCEPTED")
-                    } catch (_: Exception) {}
-                }
             }
             AnalyticsEventsHelper.logOfferAccepted(context, requestId, providerId)
             onSuccess()

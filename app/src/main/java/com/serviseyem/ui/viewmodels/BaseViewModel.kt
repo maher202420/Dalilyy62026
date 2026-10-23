@@ -28,13 +28,8 @@ open class BaseViewModel : ViewModel() {
 
     open var appContext: android.content.Context? = null
 
-    open val db: FirebaseFirestore? by lazy {
-        try {
-            FirebaseFirestore.getInstance()
-        } catch (e: Exception) {
-            android.util.Log.e("BaseViewModel", "Firestore not initialized", e)
-            null
-        }
+    open val db: FirebaseFirestore by lazy {
+        FirebaseFirestore.getInstance()
     }
 
     open val firestoreListeners = java.util.concurrent.CopyOnWriteArrayList<ListenerRegistration>()

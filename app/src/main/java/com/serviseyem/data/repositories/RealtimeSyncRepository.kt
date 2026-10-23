@@ -6,7 +6,7 @@ import android.content.Context
 import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.ProviderEntity
 import com.serviseyem.data.StoreEntity
-import com.serviseyem.data.local.MapDatabase
+
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.channels.awaitClose
@@ -17,9 +17,8 @@ sealed class RealtimeSyncEvent {
     data class NewItemAdded(val title: String, val category: String) : RealtimeSyncEvent()
 }
 
-class RealtimeSyncRepository(context: Context) {
+class RealtimeSyncRepository(context: Context? = null) {
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
-    private val mapDatabase: MapDatabase = MapDatabase.getInstance(context)
 
     fun observeProvidersRealtime(onNewItemDetected: ((String) -> Unit)? = null): Flow<List<ProviderEntity>> = callbackFlow {
         var previousCount = -1
@@ -28,8 +27,7 @@ class RealtimeSyncRepository(context: Context) {
             .limit(200)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
-                    val cached = mapDatabase.mapDao.getProviders()
-                    trySend(cached)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
 
@@ -49,7 +47,6 @@ class RealtimeSyncRepository(context: Context) {
                 }
                 previousCount = list.size
 
-                mapDatabase.mapDao.saveProviders(list)
                 trySend(list)
             }
 
@@ -63,8 +60,7 @@ class RealtimeSyncRepository(context: Context) {
             .limit(200)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
-                    val cached = mapDatabase.mapDao.getStores()
-                    trySend(cached)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
 
@@ -87,7 +83,6 @@ class RealtimeSyncRepository(context: Context) {
                 }
                 previousCount = list.size
 
-                mapDatabase.mapDao.saveStores(list)
                 trySend(list)
             }
 
@@ -101,8 +96,7 @@ class RealtimeSyncRepository(context: Context) {
             .limit(200)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
-                    val cached = mapDatabase.mapDao.getProperties()
-                    trySend(cached)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
 
@@ -122,7 +116,6 @@ class RealtimeSyncRepository(context: Context) {
                 }
                 previousCount = list.size
 
-                mapDatabase.mapDao.saveProperties(list)
                 trySend(list)
             }
 

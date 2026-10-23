@@ -60,7 +60,7 @@ class AppState @Inject constructor() {
     internal val _isChatChannelsLoading = MutableStateFlow(false)
     val isChatChannelsLoading: StateFlow<Boolean> = _isChatChannelsLoading.asStateFlow()
 
-    internal val _isInitialized = MutableStateFlow(false)
+    internal val _isInitialized = MutableStateFlow(true)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
 
     internal val _isProvidersLoading = MutableStateFlow(true)
@@ -96,7 +96,7 @@ class AppState @Inject constructor() {
     internal val _pendingProviders = MutableStateFlow<List<PendingProviderEntity>>(emptyList())
     val pendingProviders: StateFlow<List<PendingProviderEntity>> = _pendingProviders.asStateFlow()
 
-    internal val _products = MutableStateFlow<List<ProductEntity>>(emptyList())
+    internal val _products = MutableStateFlow<List<ProductEntity>>(com.serviseyem.data.helpers.DefaultDemoData.getDemoProducts())
     val products: StateFlow<List<ProductEntity>> = _products.asStateFlow()
 
     internal val _properties = MutableStateFlow<List<PropertyEntity>>(com.serviseyem.data.helpers.DefaultDemoData.getDemoProperties())

@@ -30,18 +30,22 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
     val currentScreen by viewModel.currentScreen.collectAsState()
     val isEn = currentLang == "en"
 
-    val footerBg = remember(settingsState.footerBgColorHex, themeColors.secondary) {
+    val footerBg = remember(settingsState.footerBgColorHex) {
         try {
-            Color(android.graphics.Color.parseColor(settingsState.footerBgColorHex))
+            if (settingsState.footerBgColorHex.isNotBlank() && settingsState.footerBgColorHex != "default") {
+                Color(android.graphics.Color.parseColor(settingsState.footerBgColorHex))
+            } else {
+                Color(0xFF063328) // Luxury deep emerald container
+            }
         } catch (e: Exception) {
-            Color(0xFF0D332D) // Dark teal metallic container like image 2
+            Color(0xFF063328)
         }
     }
 
     Surface(
         color = footerBg,
-        shadowElevation = 6.dp,
-        border = BorderStroke(0.8.dp, Brush.horizontalGradient(listOf(Color(0xFF0F5243), Color(0xFF1B8A72), Color(0xFF0F5243)))),
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, Brush.horizontalGradient(listOf(Color(0xFF0F5243), Color(0xFFD4AF37), Color(0xFF0F5243)))),
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
@@ -50,7 +54,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 1.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceAround
         ) {
@@ -87,6 +91,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     isSelected = isAbout,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
+                    forceWhiteText = true,
                     onClick = { onInfoClick() }
                 )
             }
@@ -102,22 +107,29 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     badgeCount = unreadCount,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
+                    forceWhiteText = true,
                     onClick = { viewModel.navigateTo("BOOKINGS_VIEW") }
                 )
             }
 
-            // 3. Center Brand Text ("WAM2026")
+            // 3. Center Brand Text ("ASH")
             if (settingsState.showFooterText) {
                 Box(
-                    modifier = Modifier.padding(horizontal = 2.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    val rawBrand = settingsState.footerMessage
+                    val brandText = when {
+                        rawBrand.startsWith("card_custom_") -> "ASH"
+                        rawBrand.isBlank() || rawBrand == "WAM2026" -> "ASH"
+                        else -> rawBrand
+                    }
                     Text(
-                        text = if (settingsState.footerMessage.startsWith("card_custom_")) "WAM2026" else settingsState.footerMessage.ifBlank { "WAM2026" },
-                        fontSize = 8.5.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFFE2E8F0),
-                        letterSpacing = 0.sp,
+                        text = brandText,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                        letterSpacing = 0.5.sp,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -134,6 +146,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     isSelected = false,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
+                    forceWhiteText = true,
                     onClick = {
                         viewModel.switchLanguage()
                         viewModel.triggerNotification(
@@ -153,6 +166,7 @@ fun AppFooterBar(viewModel: MainViewModel, themeColors: VisualThemePalette, onIn
                     isSelected = isAdmin,
                     iconSizeDp = settingsState.navIconSizeDp,
                     iconStyle = settingsState.topNavIconStyle,
+                    forceWhiteText = true,
                     onClick = { viewModel.navigateTo("ADMIN_PANEL") }
                 )
             }

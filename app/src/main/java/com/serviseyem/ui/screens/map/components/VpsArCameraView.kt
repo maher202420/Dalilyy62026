@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.serviseyem.data.PropertyEntity
 import com.serviseyem.data.ProviderEntity
 import com.serviseyem.data.StoreEntity
-import com.serviseyem.ui.theme.ThemePalette
+import com.serviseyem.utils.VisualThemePalette
 
 @Composable
 fun VpsArCameraView(
@@ -28,7 +28,7 @@ fun VpsArCameraView(
     nearbyProperties: List<PropertyEntity>,
     onEntitySelected: (Any) -> Unit,
     onCloseAR: () -> Unit,
-    themeColors: ThemePalette,
+    themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
 ) {
     Box(

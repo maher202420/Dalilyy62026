@@ -104,7 +104,7 @@ fun BoxScope.FloatingIconsOverlay(
             ) {
                 Text("🤖", fontSize = 13.sp)
                 Text(
-                    text = "المساعد الذكي",
+                    text = "المساعد الذكي 🤖",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,

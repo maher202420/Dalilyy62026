@@ -11,7 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.serviseyem.ui.theme.ThemePalette
+import com.serviseyem.utils.VisualThemePalette
 
 @Composable
 fun AlephVisualAssistantDialog(
@@ -20,7 +20,7 @@ fun AlephVisualAssistantDialog(
     userLng: Double,
     onDismiss: () -> Unit,
     onOpenBooking: (Any?) -> Unit,
-    themeColors: ThemePalette
+    themeColors: VisualThemePalette
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -41,7 +41,7 @@ fun AlephVisualAssistantDialog(
                     text = "👁️ المساعد البصري الذكي",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = themeColors.primary
+                    color = themeColors.accent
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -61,7 +61,7 @@ fun AlephVisualAssistantDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = { onOpenBooking(targetEntity) },
-                            colors = ButtonDefaults.buttonColors(containerColor = themeColors.primary)
+                            colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent)
                         ) {
                             Text("حجز الخدمة", color = Color.White)
                         }

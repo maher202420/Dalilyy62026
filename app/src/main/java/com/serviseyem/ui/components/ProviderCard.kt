@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -65,7 +66,7 @@ fun ProviderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp, horizontal = 2.dp)
+            .padding(vertical = 4.dp, horizontal = 2.dp)
             .scale(scaleFactor)
             .pointerInput(Unit) {
                 detectTapGestures(
@@ -77,18 +78,18 @@ fun ProviderCard(
                     onTap = { showDetailsDialog = true }
                 )
             },
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = themeColors.surface),
-        border = BorderStroke(1.dp, if (isVerified) themeColors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.1f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF111C30)),
+        border = BorderStroke(1.dp, Color(0xFF1E2E4E)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // 1. Cover Image Section
+            // 1. Cover / Illustration Section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(95.dp)
-                    .background(Color(0xFF1E293B))
+                    .background(Color(0xFF0A1220))
             ) {
                 if (coverImg.isNotBlank()) {
                     SmartAsyncImage(
@@ -100,10 +101,19 @@ fun ProviderCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Brush.linearGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A)))),
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFF0E1A2E), Color(0xFF09111E))
+                                )
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("🛠️", fontSize = 34.sp)
+                        Icon(
+                            imageVector = Icons.Default.Handyman,
+                            contentDescription = null,
+                            tint = Color(0xFF38BDF8).copy(alpha = 0.5f),
+                            modifier = Modifier.size(38.dp)
+                        )
                     }
                 }
 
@@ -113,55 +123,57 @@ fun ProviderCard(
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)),
+                                colors = listOf(Color.Transparent, Color(0xFF111C30).copy(alpha = 0.85f)),
                                 startY = 30f
                             )
                         )
                 )
 
-                // Badges in Cover Header
+                // Badges in Header (Rating on left, Verified on right)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (isVerified || provider.isVip) {
-                        Surface(
-                            color = Color.Black.copy(alpha = 0.8f),
-                            shape = RoundedCornerShape(6.dp),
-                            border = BorderStroke(0.5.dp, themeColors.accent)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (provider.isVip) "👑 VIP" else "موثق ✓",
-                                    fontSize = 9.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = themeColors.accent
-                                )
-                            }
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.width(1.dp))
-                    }
-
-                    // Rating Badge
+                    // Rating Badge (⭐ 5.0 in black capsule with gold star)
                     Surface(
                         color = Color.Black.copy(alpha = 0.8f),
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, Color(0xFF1E2E4E)),
+                        shadowElevation = 2.dp,
                         modifier = Modifier.clickable { showReviewsListDialog = true }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFFFD700), modifier = Modifier.size(12.dp))
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(String.format("%.1f", provider.rating), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(String.format("%.1f", provider.rating), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
+                        }
+                    }
+
+                    // Verified Badge (موثق ✓ in dark capsule)
+                    if (isVerified || provider.isVip) {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.8f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFF1E2E4E))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (provider.isVip) "VIP موثق" else "موثق ✓",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
                         }
                     }
                 }
@@ -171,7 +183,7 @@ fun ProviderCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
                 // Header with Overlapping Avatar
                 Row(
@@ -181,10 +193,11 @@ fun ProviderCard(
                     Box(
                         modifier = Modifier
                             .offset(y = (-20).dp)
-                            .size(52.dp)
+                            .size(54.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF0F172A))
-                            .border(2.dp, themeColors.accent, CircleShape),
+                            .border(2.dp, Color(0xFF2563EB), CircleShape)
+                            .shadow(6.dp, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         if (avatarImg.isNotBlank()) {
@@ -194,7 +207,12 @@ fun ProviderCard(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            Text("👤", fontSize = 24.sp)
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Color(0xFF38BDF8),
+                                modifier = Modifier.size(30.dp)
+                            )
                         }
                     }
 
@@ -208,7 +226,7 @@ fun ProviderCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = provider.name,
-                                fontSize = 13.sp,
+                                fontSize = 14.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 maxLines = 1,
@@ -217,14 +235,20 @@ fun ProviderCard(
                             )
                             if (isVerified) {
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("✔️", fontSize = 11.sp, color = themeColors.accent)
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Verified",
+                                    tint = Color(0xFF10B981),
+                                    modifier = Modifier.size(14.dp)
+                                )
                             }
                         }
-                        val profText = if (provider.profession.isBlank()) "صيانة فنية وخدمات" else provider.profession
+                        val profText = if (provider.profession.isBlank()) "صيانة فنية وخدمات متكاملة" else provider.profession
                         Text(
                             text = profText,
-                            fontSize = 10.sp,
-                            color = themeColors.accent,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF38BDF8),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -243,60 +267,66 @@ fun ProviderCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(12.dp))
-                        Spacer(modifier = Modifier.width(2.dp))
-                        val locText = if (provider.localNeighborhood.isNotBlank()) "${provider.area} - ${provider.localNeighborhood}" else provider.area.ifBlank { "اليمن" }
+                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
+                        val locText = if (provider.localNeighborhood.isNotBlank()) "${provider.area} - ${provider.localNeighborhood}" else provider.area.ifBlank { "صنعاء - الجمهورية اليمنية" }
                         Text(
                             text = locText,
-                            fontSize = 9.5.sp,
-                            color = Color.LightGray,
+                            fontSize = 10.5.sp,
+                            color = Color(0xFF94A3B8),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = if (provider.isAvailable) "🟢 متاح الآن" else "🔴 مشغول",
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (provider.isAvailable) Color(0xFF10B981) else Color(0xFFEF5350)
-                        )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF064E3B).copy(alpha = 0.5f),
+                        border = BorderStroke(0.5.dp, Color(0xFF10B981))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(if (provider.isAvailable) Color(0xFF10B981) else Color(0xFFEF4444), CircleShape)
+                            )
+                            Text(
+                                text = if (provider.isAvailable) "متاح الآن" else "مشغول",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (provider.isAvailable) Color(0xFF34D399) else Color(0xFFF87171)
+                            )
+                        }
                     }
                 }
 
-                // 3. Action Buttons Row: [محادثة] [التفاصيل] [حجز] [الآراء]
+                // 3. Action Buttons Row: [★] [حجز 📅] [التفاصيل 📋] [محادثة 💬] (Screenshot 1 Layout)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .offset(y = (-4).dp)
                         .padding(bottom = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // زر المحادثة الفورية (إصلاح التوجيه لكود الكيان الفعلي أولاً)
-                    Button(
-                        onClick = { onChatOpen(provider.id.ifBlank { provider.phone }) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f).height(32.dp),
-                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
+                    // زر المفضلة (Star)
+                    Surface(
+                        onClick = { viewModel.toggleFavorite(provider.id) },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF1E2E4E),
+                        border = BorderStroke(1.dp, Color(0xFF283B63)),
+                        modifier = Modifier.size(36.dp)
                     ) {
-                        Text("محادثة 💬", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Star, contentDescription = "المفضلة", tint = Color(0xFFF59E0B), modifier = Modifier.size(17.dp))
+                        }
                     }
 
-                    // زر التفاصيل (شاشة كاملة)
-                    Button(
-                        onClick = { showDetailsDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f).height(32.dp),
-                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
-                    ) {
-                        Text("التفاصيل 📋", fontSize = 10.sp, color = Color.Black, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                    }
-
-                    // زر حجز الموعد
+                    // زر حجز الموعد (Green 📅)
                     Button(
                         onClick = {
                             if (currentUserIdState.isEmpty()) {
@@ -306,23 +336,51 @@ fun ProviderCard(
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f).height(32.dp),
-                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).height(36.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                     ) {
-                        Text("حجز 📅", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("📅", fontSize = 11.sp)
+                            Text("حجز", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        }
                     }
 
-                    // زر الآراء والتقييمات
-                    OutlinedButton(
-                        onClick = { showReviewsListDialog = true },
-                        border = BorderStroke(1.dp, themeColors.accent.copy(alpha = 0.6f)),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                        modifier = Modifier.weight(0.9f).height(32.dp),
-                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
+                    // زر التفاصيل الكاملة (Silver/Light 📋)
+                    Button(
+                        onClick = { showDetailsDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE2E8F0)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).height(36.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                     ) {
-                        Text("⭐", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("📋", fontSize = 11.sp)
+                            Text("التفاصيل", color = Color(0xFF0F172A), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        }
+                    }
+
+                    // زر المحادثة الفورية (Blue 💬)
+                    Button(
+                        onClick = { onChatOpen(provider.id.ifBlank { provider.phone }) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).height(36.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("💬", fontSize = 11.sp)
+                            Text("محادثة", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        }
                     }
                 }
             }

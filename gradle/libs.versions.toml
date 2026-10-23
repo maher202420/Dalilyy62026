@@ -113,6 +113,7 @@ firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
 
 [plugins]
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.3" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 android-application = { id = "com.android.application", version.ref = "agp" }

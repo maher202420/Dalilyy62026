@@ -3,7 +3,7 @@ package com.serviseyem.data.repositories
 import android.content.Context
 import android.util.Log
 import com.serviseyem.data.BookingEntity
-import com.serviseyem.data.LocalAppCacheManager
+
 import com.serviseyem.security.BookingSecurityHelper
 import com.serviseyem.utils.AnalyticsEventsHelper
 import com.serviseyem.utils.AppConstants
@@ -15,8 +15,7 @@ import com.google.firebase.firestore.Query
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.serviseyem.data.local.toEntity
-import com.serviseyem.data.local.toRoomEntity
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,7 +43,7 @@ class BookingRepository(
 
     private val repositoryScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 
-    private val cacheManager = LocalAppCacheManager(context)
+
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
     private val _cachedBookings = MutableStateFlow<List<BookingEntity>>(emptyList())
@@ -52,29 +51,7 @@ class BookingRepository(
 
     init {
         repositoryScope.launch {
-            loadFromCacheAsync()
-        }
-    }
-
-    private suspend fun loadFromCacheAsync(): List<BookingEntity> {
-        return try {
-            val bookingDao = com.serviseyem.data.local.AppDatabase.getInstance(context).bookingDao()
-            val list = bookingDao.getAllBookingsList().map { it.toEntity() }
-            val now = System.currentTimeMillis()
-            val normalizedList = list.map { booking ->
-                if (booking.isLocked && booking.lockedUntil != null && now > booking.lockedUntil) {
-                    booking.copy(isLocked = false, lockedUntil = null)
-                } else {
-                    booking
-                }
-            }
-            if (normalizedList.isNotEmpty()) {
-                _cachedBookings.value = normalizedList
-            }
-            normalizedList
-        } catch (e: Exception) {
-            Log.e("BookingRepository", "Error reading Room cache", e)
-            _cachedBookings.value
+            loadFromCache()
         }
     }
 
@@ -93,21 +70,6 @@ class BookingRepository(
 
     private fun saveToCache(list: List<BookingEntity>) {
         _cachedBookings.value = list
-        try {
-            val bookingDao = com.serviseyem.data.local.AppDatabase.getInstance(context).bookingDao()
-            val roomList = list.map { it.toRoomEntity() }
-            repositoryScope.launch {
-                cacheMutex.withLock {
-                    try {
-                        bookingDao.replaceAllBookings(roomList)
-                    } catch (e: Exception) {
-                        Log.e("BookingRepository", "Error persisting bookings to Room", e)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("BookingRepository", "Error accessing Room database", e)
-        }
     }
 
     /**
@@ -150,8 +112,8 @@ class BookingRepository(
             } else items
         }
 
-        // Emit Room cache immediately for instant offline rendering
-        val local = loadFromCache().ifEmpty { loadFromCacheAsync() }
+        // Emit memory cache immediately for instant rendering
+        val local = loadFromCache()
         if (local.isNotEmpty()) {
             trySend(filterLocal(local))
         }
@@ -312,13 +274,7 @@ class BookingRepository(
 
                     if (isOffline) {
                         // Queue for offline sync and notify caller that cloud sync is pending
-                        cacheManager.queueOfflineAction(
-                            LocalAppCacheManager.OfflineSyncAction(
-                                type = "CREATE_BOOKING",
-                                payloadJson = moshi.adapter(BookingEntity::class.java).toJson(finalBooking)
-                            )
-                        )
-                        onError("تعذر الاتصال بالخادم حالياً؛ تم حفظ الحجز محلياً في طابور المزامنة وسيتم إرساله تلقائياً فور عودة الإنترنت.")
+                        onError("تعذر الاتصال بالخادم حالياً؛ يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.")
                     } else {
                         // Rollback optimistic local cache on permanent server rejection
                         val rolledBack = _cachedBookings.value.filterNot { it.id == finalBooking.id }

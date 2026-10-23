@@ -33,18 +33,22 @@ class MainViewModel @Inject constructor(
     val chatRepo: com.serviseyem.data.repositories.ChatRepository,
     val appState: com.serviseyem.ui.helpers.AppState,
     val walletManager: com.serviseyem.utils.WalletManager,
+    val providerRepository: com.serviseyem.data.repositories.ProviderRepository,
+    val storeRepository: com.serviseyem.data.repositories.StoreRepository,
+    val propertyRepository: com.serviseyem.data.repositories.PropertyRepository,
     val storeManagementViewModel: com.serviseyem.ui.viewmodels.StoreManagementViewModel = com.serviseyem.ui.viewmodels.StoreManagementViewModel(appState),
     val propertyManagementViewModel: com.serviseyem.ui.viewmodels.PropertyManagementViewModel = com.serviseyem.ui.viewmodels.PropertyManagementViewModel(appState),
     val jobManagementViewModel: com.serviseyem.ui.viewmodels.JobManagementViewModel = com.serviseyem.ui.viewmodels.JobManagementViewModel(appState),
     val paymentManagementViewModel: com.serviseyem.ui.viewmodels.PaymentManagementViewModel = com.serviseyem.ui.viewmodels.PaymentManagementViewModel(appState)
 ) : BaseViewModel() {
+    private var isSeeded = false
 
     val preferenceHelper = com.serviseyem.ui.helpers.AppPreferenceHelper()
     val notificationRepository = com.serviseyem.data.repositories.NotificationRepository()
-    val firestoreSeedHelper by lazy { db?.let { com.serviseyem.ui.helpers.FirestoreSeedHelper(it) } }
-    val realtimeSyncHelper by lazy { db?.let { com.serviseyem.ui.helpers.RealtimeSyncHelper(it) } }
-    val registrationHelper by lazy { db?.let { com.serviseyem.ui.helpers.RegistrationHelper(it, auth, preferenceHelper) } }
-    val accountRecoveryHelper by lazy { db?.let { com.serviseyem.ui.helpers.AccountRecoveryHelper(it, preferenceHelper) } }
+    val firestoreSeedHelper by lazy { com.serviseyem.ui.helpers.FirestoreSeedHelper(db) }
+    val realtimeSyncHelper by lazy { com.serviseyem.ui.helpers.RealtimeSyncHelper(db) }
+    val registrationHelper by lazy { com.serviseyem.ui.helpers.RegistrationHelper(db, auth, preferenceHelper) }
+    val accountRecoveryHelper by lazy { com.serviseyem.ui.helpers.AccountRecoveryHelper(db, preferenceHelper) }
 
     override fun onCleared() {
         super.onCleared()
@@ -252,12 +256,7 @@ class MainViewModel @Inject constructor(
     private var isProvidersLoaded = false
 
     private fun checkInitializationComplete() {
-        if (isSettingsLoaded && isCategoriesLoaded && isCitiesLoaded && isProvidersLoaded) {
-            viewModelScope.launch {
-                kotlinx.coroutines.delay(1000)
-                _isInitialized.value = true
-            }
-        }
+        _isInitialized.value = true
     }
 
     internal val _isInitialized get() = appState._isInitialized
@@ -292,11 +291,7 @@ class MainViewModel @Inject constructor(
     val notificationViewModel = com.serviseyem.ui.screens.notifications.NotificationViewModel(this)
 
     init {
-        _stores.value = getDefaultStoresList()
-        _properties.value = getDefaultPropertiesList()
-        if (_providers.value.isEmpty()) {
-            _providers.value = getDefaultProvidersList()
-        }
+
         viewModelScope.launch {
             authViewModel.adminRole.collect { role ->
                 if (adminViewModel._adminRole.value != role) {
@@ -538,16 +533,30 @@ class MainViewModel @Inject constructor(
             if (!_isInitialized.value) {
                 _isInitialized.value = true
             }
+            
+            // Self-repair: If after 5 seconds no data is synced, force a seed check
+            kotlinx.coroutines.delay(4000)
+            if (providers.value.isEmpty() && stores.value.isEmpty()) {
+                android.util.Log.w("MainViewModel", "⚠️ No data detected after sync. Forcing seed repair...")
+                seedFirestoreIfEmpty(force = true)
+            }
         }
     }
     fun setupRealtimeFirestoreListeners() {
         realtimeSyncHelper?.clearListeners()
         realtimeSyncHelper?.setupRealtimeFirestoreListeners(appState)
+        
+        // Use new robust repository-based sync
+        providerRepository.startSyncingProviders()
+        storeRepository.startSyncingStores()
+        propertyRepository.startSyncingProperties()
+
         viewModelScope.launch {
             realtimeSyncHelper?.loadOnDemandInitialData(appState)
         }
     }
-    fun seedFirestoreIfEmpty() {
+    fun seedFirestoreIfEmpty(force: Boolean = false) {
+        if (force) isSeeded = false
         firestoreSeedHelper?.seedFirestoreIfEmpty()
     }
     override fun getDefaultStoresList(): List<com.serviseyem.data.StoreEntity> {

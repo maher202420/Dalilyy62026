@@ -8,6 +8,7 @@ import com.serviseyem.data.StoreEntity
 import com.serviseyem.utils.getPropertyCoords
 import com.serviseyem.utils.getProviderCoords
 import com.serviseyem.utils.getStoreCoords
+import com.serviseyem.ui.screens.home.extensions.*
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -88,8 +89,8 @@ object MapJsonBuilder {
         // 2. Stores & Medical Centers & Restaurants
         nearbyStores.forEach { s ->
             val coords = getStoreCoords(s)
-            val isMedical = s.sectionId.contains("medical") || s.categoryId.contains("medical") || s.categoryId.contains("pharmacy") || s.medicalLicenseNo.isNotBlank() || s.name.contains("طبي") || s.name.contains("مستشفى") || s.name.contains("عيادة") || s.name.contains("صيدلية")
-            val isRestaurant = !isMedical && (s.sectionId.contains("restaurant") || s.categoryId.contains("restaurant") || s.name.contains("مطعم") || s.name.contains("مأكولات") || s.name.contains("كافيه") || s.name.contains("شاورما"))
+            val isMedical = s.isMedicalCenter()
+            val isRestaurant = s.isRestaurantOrCafe()
 
             val emoji = when {
                 isMedical -> "🏥"

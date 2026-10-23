@@ -10,7 +10,11 @@ object ScreenRoutes {
     }
 
     fun showTopBar(currentScreen: String, adminRole: String = "GUEST"): Boolean {
-        return currentScreen != AppScreens.CHAT_DIRECT && currentScreen != AppScreens.MAP_VIEW && currentScreen != AppScreens.SMART_ASSISTANT
+        return currentScreen != AppScreens.CHAT_DIRECT && 
+               currentScreen != AppScreens.MAP_VIEW && 
+               currentScreen != AppScreens.SMART_ASSISTANT &&
+               !currentScreen.endsWith("_DETAILS") &&
+               currentScreen != AppScreens.DYNAMIC_PROFILE
     }
 
     fun isRegistrationForm(screen: String): Boolean =

@@ -177,25 +177,31 @@ fun AppHeaderBar(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // [ طلباتي ] Icon Button in Header (Reduced 30%)
+                // [ طلباتي 📋 ] Action Button in Header
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(themeColors.accent)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                listOf(Color(0xFFF59E0B), Color(0xFFD97706))
+                            )
+                        )
                         .clickable { viewModel.navigateTo("ORDERS_VIEW") }
-                        .padding(horizontal = 6.dp, vertical = 2.5.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text("📋", fontSize = 9.5.sp)
+                        Text("📋", fontSize = 10.sp)
                         val isProvider = viewModel.selectedProvider != null || viewModel.selectedStore != null || viewModel.selectedProperty != null
                         Text(
                             text = if (isEn) (if (isProvider) "Requests" else "My Requests") else (if (isProvider) "الطلبات" else "طلباتي"),
-                            fontSize = 9.sp,
+                            fontSize = 9.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black
+                            color = Color.Black,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -207,35 +213,35 @@ fun AppHeaderBar(
                     onClick = { viewModel.refreshData(showNotification = true) },
                     modifier = Modifier
                         .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                        .size(24.dp)
+                        .size(26.dp)
                 ) {
                     if (isRefreshingHeader) {
                         CircularProgressIndicator(
                             color = Color.White,
                             strokeWidth = 1.5.dp,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = if (isEn) "Refresh" else "تحديث البيانات",
                             tint = Color.White,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }
             }
         }
 
-        // Row 2: Navigation Items (5 luxury 3D golden icons - Preserved in order & iconography)
+        // Row 2: Navigation Items (6 luxury icons: الرئيسية 🏠, الخرائط 🗺️, الانضمام 👤, الإشعارات 🔔, المحادثات ✉️)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp, vertical = 2.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF1A2128))
-                .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)), RoundedCornerShape(16.dp))
-                .padding(vertical = 3.dp),
+                .background(Color(0xFF131D33))
+                .border(BorderStroke(1.dp, Color(0xFF1E2E4E)), RoundedCornerShape(16.dp))
+                .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {

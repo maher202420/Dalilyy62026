@@ -35,13 +35,14 @@ fun ProfileHeader(
     bookingsCount: Int,
     completedRevenue: Double,
     themeColors: VisualThemePalette,
+    workingHours: String = "9:00 ص - 10:00 م",
     onMapClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = themeColors.surface),
-        border = BorderStroke(1.dp, themeColors.accent.copy(alpha = 0.25f))
+        border = BorderStroke(1.dp, Color(0xFF1E2E4E))
     ) {
         Column {
             // Cover & Hero image
@@ -84,6 +85,7 @@ fun ProfileHeader(
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // Name & Rating
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -112,32 +114,74 @@ fun ProfileHeader(
                                     modifier = Modifier
                                         .background(Color(0xFFFFA000), RoundedCornerShape(4.dp))
                                         .padding(horizontal = 4.dp, vertical = 2.dp)
-                                    ) {
-                                        Text("VIP", color = Color.Black, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                                    }
+                                ) {
+                                    Text("VIP", color = Color.Black, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
-                        Text(
-                            text = "📍 $entityAddress",
-                            fontSize = 12.sp,
-                            color = Color.LightGray
-                        )
                     }
 
-                    // Rating Badge
+                    // Rating Badge (⭐ 5.0 (42))
                     Surface(
-                        color = Color(0xFFFFA000).copy(alpha = 0.2f),
-                        border = BorderStroke(1.dp, Color(0xFFFFA000)),
+                        color = Color.Black.copy(alpha = 0.6f),
+                        border = BorderStroke(1.dp, Color(0xFF1E2E4E)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(String.format(java.util.Locale.US, "%.1f", ratingValue), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Text(" ($reviewsCount)", color = Color.LightGray, fontSize = 10.sp)
+                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(String.format(java.util.Locale.US, "%.1f", ratingValue), color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                            Text(" ($reviewsCount)", color = Color(0xFF94A3B8), fontSize = 10.sp)
+                        }
+                    }
+                }
+
+                // Description
+                if (entityDescription.isNotBlank()) {
+                    Text(
+                        text = entityDescription,
+                        fontSize = 11.5.sp,
+                        color = Color(0xFFCBD5E1),
+                        lineHeight = 16.sp
+                    )
+                }
+
+                // Metadata Row: Location + Hours
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("📍", fontSize = 12.sp)
+                        Text(
+                            text = entityAddress,
+                            fontSize = 11.sp,
+                            color = Color(0xFF94A3B8),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+
+                    if (workingHours.isNotBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("⏰", fontSize = 12.sp)
+                            Text(
+                                text = com.serviseyem.utils.formatArabicWorkingHours(workingHours),
+                                fontSize = 11.sp,
+                                color = Color(0xFF34D399),
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                 }

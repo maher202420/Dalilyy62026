@@ -10,6 +10,7 @@ import com.serviseyem.utils.getProviderCoords
 import com.serviseyem.utils.getStoreCoords
 import com.serviseyem.ui.screens.map.utils.CityAliases
 import com.serviseyem.ui.screens.map.utils.MapDistanceCalculator
+import com.serviseyem.ui.screens.home.extensions.*
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -64,11 +65,12 @@ object MapScreenFilters {
     ): List<StoreEntity> {
         val cleanQuery = searchQuery.trim().lowercase()
         return stores.filter { s ->
-            val isMedical = s.sectionId.contains("medical") || s.categoryId.contains("medical") || s.name.contains("طبي") || s.name.contains("صيدلية") || s.name.contains("مستشفى") || s.name.contains("عيادة")
-            val isRestaurant = !isMedical && (s.sectionId.contains("restaurant") || s.categoryId.contains("restaurant") || s.name.contains("مطعم") || s.name.contains("كافيه") || s.name.contains("مأكولات") || s.name.contains("شاورما"))
+            val isMedical = s.isMedicalCenter()
+            val isRestaurant = s.isRestaurantOrCafe()
 
             val matchesCat = when (selectedCategory) {
                 "ALL" -> true
+                "PROVIDERS" -> false
                 "STORES" -> !isMedical && !isRestaurant
                 "RESTAURANTS" -> isRestaurant
                 "MEDICAL" -> isMedical
@@ -135,8 +137,8 @@ object MapScreenFilters {
 
         filteredStores.forEach { s ->
             val coords = getStoreCoords(s)
-            val isMedical = s.sectionId.contains("medical") || s.categoryId.contains("medical") || s.name.contains("طبي") || s.name.contains("صيدلية")
-            val isRestaurant = !isMedical && (s.sectionId.contains("restaurant") || s.categoryId.contains("restaurant") || s.name.contains("مطعم") || s.name.contains("كافيه"))
+            val isMedical = s.isMedicalCenter()
+            val isRestaurant = s.isRestaurantOrCafe()
             val typeStr = if (isMedical) "MEDICAL" else if (isRestaurant) "RESTAURANT" else "STORE"
             val d = MapDistanceCalculator.calculateDistanceMeters(safeUserLat, safeUserLng, coords.first, coords.second)
             val r = (d / 1000.0).coerceIn(1.0, 30.0).toFloat() * 10f

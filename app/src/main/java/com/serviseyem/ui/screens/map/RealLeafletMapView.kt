@@ -49,6 +49,7 @@ fun RealLeafletMapView(
     onPanOffsetChange: (Offset) -> Unit = {},
     selectedEntity: Any? = null,
     mapMode: MapMode = MapMode.VELA_3D,
+    currentMapLayer: String = "google_satellite",
     tiltAngle: Float = 30f,
     onProviderSelected: (ProviderEntity) -> Unit,
     onStoreSelected: (StoreEntity) -> Unit,
@@ -103,9 +104,12 @@ fun RealLeafletMapView(
     }
 
     // تبديل أوضاع خريطة Vela (3D أو الصور الجوية OAM)
-    LaunchedEffect(isMapReady, mapMode) {
+    LaunchedEffect(isMapReady, mapMode, currentMapLayer) {
         if (isMapReady && webViewRef != null) {
-            val script = "if (window.setVelaMode) { window.setVelaMode('${mapMode.name}'); }"
+            val script = """
+                if (window.setVelaMode) { window.setVelaMode('${mapMode.name}'); }
+                if (window.switchLayer) { window.switchLayer('$currentMapLayer'); }
+            """.trimIndent()
             webViewRef?.evaluateJavascript(script, null)
         }
     }
@@ -166,6 +170,7 @@ fun RealLeafletMapView(
                             useWideViewPort = true
                             allowFileAccess = true
                             allowContentAccess = true
+                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         }
 
                         // جسر التواصل بين JavaScript في Leaflet وكود Kotlin الأصلي

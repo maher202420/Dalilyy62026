@@ -249,50 +249,25 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // [SURGERY] تعطيل مؤقت لجميع عمليات التهيئة الخارجية لمنع الانهيار
-        /*
-        try {
-            installSplashScreen()
-        } catch (e: Throwable) {
-            android.util.Log.w("MainActivity", "installSplashScreen skipped: ${e.message}")
-        }
-        */
         super.onCreate(savedInstanceState)
-        // pendingNavigationIntent.value = intent
-        
-        // 🔐 تهيئة Vault إذا لزم الأمر بأمان تام
-        /*
-        try {
-            initializeAdminVaultIfNeeded()
-        } catch (e: Throwable) {
-            android.util.Log.e("MainActivity", "Vault init error", e)
-        }
-        
-        try {
-            if (!com.serviseyem.security.SecurityManager.verifyAppSignature(this)) {
-                android.util.Log.w("MainActivity", "Signature verification warning.")
-            }
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        }
-        
+        pendingNavigationIntent.value = intent
+
         try {
             VoiceManager.init(this)
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        */
 
         enableEdgeToEdge()
         setContent {
-            // [SURGERY] واجهة بسيطة جداً للتأكد من أن التطبيق يعمل
-            androidx.compose.material3.Surface(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
-                androidx.compose.material3.Text(text = "التطبيق يعمل الآن!")
-            }
-        }
-    }
+            val viewModel: MainViewModel = hiltViewModel()
+            val context = LocalContext.current
+            val settingsState by viewModel.settings.collectAsState()
 
-
+            LaunchedEffect(Unit) {
+                try {
+                    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+                    if (cm != null) {
                         networkCallback?.let { oldCb ->
                             try { cm.unregisterNetworkCallback(oldCb) } catch (_: Exception) {}
                         }

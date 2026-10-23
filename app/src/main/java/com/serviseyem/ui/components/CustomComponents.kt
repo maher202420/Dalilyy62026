@@ -72,6 +72,7 @@ fun Luxury3DNavIcon(
     badgeCount: Int = 0,
     iconSizeDp: Int = 18,
     iconStyle: String = "GOLDEN_3D",
+    forceWhiteText: Boolean = false,
     onClick: () -> Unit
 ) {
     // 0.7f: معامل تصغير نسبي (30% scale reduction) للحفاظ على مساحات أشرطة التنقل
@@ -123,11 +124,11 @@ fun Luxury3DNavIcon(
                 modifier = Modifier.size(sizeDp + 6.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    if (vectorIcon != null && iconStyle == "MINIMAL") {
+                    if (vectorIcon != null && (iconStyle == "MINIMAL" || forceWhiteText)) {
                         Icon(
                             imageVector = vectorIcon,
                             contentDescription = label,
-                            tint = if (isSelected) Color(0xFFF59E0B) else Color.White,
+                            tint = if (forceWhiteText) Color.White else if (isSelected) Color(0xFFF59E0B) else Color.White,
                             modifier = Modifier.size(sizeDp)
                         )
                     } else {
@@ -169,8 +170,8 @@ fun Luxury3DNavIcon(
             fontSize = 7.5.sp,
             maxLines = 1,
             softWrap = false,
-            color = if (isSelected) Color(0xFFFFD700) else Color.LightGray,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            color = if (forceWhiteText) Color.White else if (isSelected) Color(0xFFFFD700) else Color.LightGray,
+            fontWeight = if (isSelected || forceWhiteText) FontWeight.Bold else FontWeight.Normal
         )
     }
 }

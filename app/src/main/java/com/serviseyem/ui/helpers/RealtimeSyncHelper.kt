@@ -187,10 +187,11 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                             null
                         }
                     }
-                }.filter { !it.name.contains("ماهر") && it.id != "p_maher" }
+                }
 
                 val activeList = allList.filter { !it.isDeleted && !it.isBlocked && (it.subscriptionStatus == "APPROVED" || it.subscriptionStatus == "ACTIVE" || it.subscriptionStatus.isBlank()) }
-                appState._providers.value = if (activeList.isNotEmpty()) activeList else com.serviseyem.data.helpers.DefaultDemoData.getDemoProviders()
+                val deletedList = allList.filter { it.isDeleted }
+                appState._providers.value = activeList
                 appState._deletedProviders.value = deletedList
             }
         }
@@ -259,8 +260,9 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                             null
                         }
                     }
+                }
                 val activeStores = fetched.filter { !it.isDeleted && it.isApproved && it.isActive && !it.isBlocked }
-                appState._stores.value = if (activeStores.isNotEmpty()) activeStores else com.serviseyem.data.helpers.DefaultDemoData.getDemoStores()
+                appState._stores.value = activeStores
             }
         }
 
@@ -326,7 +328,7 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                     }
                 }
                 val activeProps = fetched.filter { !it.isDeleted && it.isApproved && it.isActive && !it.isBlocked }
-                appState._properties.value = if (activeProps.isNotEmpty()) activeProps else com.serviseyem.data.helpers.DefaultDemoData.getDemoProperties()
+                appState._properties.value = activeProps
             }
         }
 
@@ -447,6 +449,28 @@ class RealtimeSyncHelper(private val db: FirebaseFirestore) {
                 if (updated) {
                     appState._pendingProviders.value = currentPending.values.toList()
                 }
+            }
+        }
+
+        // 12. Products & Services Realtime Snapshot Listener
+        db.collection("products").limit(REALTIME_QUERY_LIMIT).addSnapshotListenerReg { snapshot, error ->
+            if (error != null) {
+                error.printStackTrace()
+                return@addSnapshotListenerReg
+            }
+            if (snapshot != null) {
+                val fetched = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        val obj = doc.toObject(ProductEntity::class.java)
+                        if (obj != null) {
+                            val isDel = doc.getBoolean("isDeleted") == true || doc.getBoolean("deleted") == true
+                            obj.copy(id = doc.id, isDeleted = isDel)
+                        } else null
+                    } catch (e: Exception) {
+                        null
+                    }
+                }.filter { !it.isDeleted }
+                appState._products.value = fetched
             }
         }
     }

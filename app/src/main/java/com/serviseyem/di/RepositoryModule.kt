@@ -206,6 +206,33 @@ object RepositoryModule {
 
     @Provides
     @Singleton
+    fun provideProviderRepository(
+        firestore: FirebaseFirestore,
+        appState: com.serviseyem.ui.helpers.AppState
+    ): com.serviseyem.data.repositories.ProviderRepository {
+        return com.serviseyem.data.repositories.ProviderRepository(firestore, appState)
+    }
+
+    @Provides
+    @Singleton
+    fun provideStoreRepository(
+        firestore: FirebaseFirestore,
+        appState: com.serviseyem.ui.helpers.AppState
+    ): com.serviseyem.data.repositories.StoreRepository {
+        return com.serviseyem.data.repositories.StoreRepository(firestore, appState)
+    }
+
+    @Provides
+    @Singleton
+    fun providePropertyRepository(
+        firestore: FirebaseFirestore,
+        appState: com.serviseyem.ui.helpers.AppState
+    ): com.serviseyem.data.repositories.PropertyRepository {
+        return com.serviseyem.data.repositories.PropertyRepository(firestore, appState)
+    }
+
+    @Provides
+    @Singleton
     fun provideWalletManager(
         @ApplicationContext context: Context
     ): com.serviseyem.utils.WalletManager {

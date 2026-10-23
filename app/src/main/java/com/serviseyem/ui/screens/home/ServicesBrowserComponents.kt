@@ -45,22 +45,23 @@ fun ServicesSearchBar(
     themeColors: VisualThemePalette
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = themeColors.surface),
-        border = BorderStroke(0.8.dp, if (isFilterActive) themeColors.accent else themeColors.accent.copy(alpha = 0.25f)),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, if (isFilterActive) Color(0xFFD4AF37) else Color(0xFFE2E8F0)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "بحث",
-                tint = themeColors.accent,
-                modifier = Modifier.size(18.dp)
+                tint = Color(0xFF0D5C46),
+                modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
 
@@ -76,8 +77,8 @@ fun ServicesSearchBar(
                     singleLine = true,
                     maxLines = 1,
                     textStyle = androidx.compose.ui.text.TextStyle(
-                        color = themeColors.textPrimary,
-                        fontSize = 11.sp,
+                        color = Color(0xFF0F172A),
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Normal
                     ),
                     modifier = Modifier
@@ -87,8 +88,8 @@ fun ServicesSearchBar(
                         if (searchQuery.isEmpty()) {
                             Text(
                                 text = "ابحث عن فني، متجر، خدمة، عقار...",
-                                fontSize = 11.sp,
-                                color = themeColors.textSecondary.copy(alpha = 0.7f),
+                                fontSize = 11.5.sp,
+                                color = Color(0xFF94A3B8),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -113,15 +114,15 @@ fun ServicesSearchBar(
                 Surface(
                     onClick = onFilterClick,
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isFilterActive) themeColors.accent else Color.White.copy(alpha = 0.08f),
-                    border = BorderStroke(0.7.dp, if (isFilterActive) themeColors.accent else Color.White.copy(alpha = 0.15f)),
+                    color = if (isFilterActive) Color(0xFF0D5C46) else Color(0xFFF1F5F9),
+                    border = BorderStroke(0.7.dp, if (isFilterActive) Color(0xFFD4AF37) else Color(0xFFE2E8F0)),
                     modifier = Modifier.size(34.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
+                            imageVector = Icons.Default.Tune,
                             contentDescription = "فلترة وبحث متقدم",
-                            tint = if (isFilterActive) Color.Black else Color.White,
+                            tint = if (isFilterActive) Color.White else Color(0xFF475569),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -143,8 +144,8 @@ fun ServicesSearchBar(
                     Icon(
                         imageVector = Icons.Default.Mic,
                         contentDescription = "بحث صوتي",
-                        tint = themeColors.accent,
-                        modifier = Modifier.size(16.dp)
+                        tint = Color(0xFF0D5C46),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

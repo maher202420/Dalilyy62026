@@ -245,6 +245,7 @@ fun MapScreenContent(
                         onPanOffsetChange = { state.panOffset = it },
                         selectedEntity = state.selectedEntity,
                         mapMode = state.currentMapMode,
+                        currentMapLayer = state.currentMapLayer,
                         tiltAngle = state.tiltAngle,
                         onProviderSelected = { state.selectedEntity = it },
                         onStoreSelected = { state.selectedEntity = it },
@@ -289,32 +290,6 @@ fun MapScreenContent(
                 }
             }
 
-            // [تعديل] الزر الدائري الأحمر العائم في الأسفل يميناً كالصورة المرفقة (تبديل الرادار والخريطة الحية)
-            Surface(
-                shape = androidx.compose.foundation.shape.CircleShape,
-                color = Color(0xFFDC2626), // Red circle as in screenshot
-                shadowElevation = 8.dp,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
-                    .padding(end = 16.dp, bottom = if (state.selectedEntity != null) 220.dp else 24.dp)
-                    .size(54.dp)
-            ) {
-                IconButton(
-                    onClick = {
-                        showMapErrorOverlay = false
-                        state.isRadarMode = !state.isRadarMode
-                    },
-                    modifier = Modifier.fillMaxSize().testTag("floating_radar_fab")
-                ) {
-                    Icon(
-                        imageVector = if (state.isRadarMode) Icons.Default.Place else Icons.Default.Navigation,
-                        contentDescription = "رادار الخدمات",
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-            }
 
             // Top Header & Filter Bar
             Column(
@@ -388,27 +363,31 @@ fun MapScreenContent(
                     themeColors = themeColors
                 )
 
-                // 🎛️ مركز التحكم الموحد (Vela 3D + OAM + AR VPS + Aleph Vision)
-                if (state.currentMapMode != MapMode.AR_VPS) {
-                    MapControlCenter(
-                        currentMode = state.currentMapMode,
-                        onModeChange = { mode ->
-                            state.currentMapMode = mode
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("تم تفعيل ${mode.label} (${mode.icon})")
-                            }
-                        },
-                        tiltAngle = state.tiltAngle,
-                        onToggleTilt = {
-                            state.tiltAngle = if (state.tiltAngle > 0) 0f else 32f
-                        },
-                        onOpenAleph = {
-                            state.alephSelectedEntity = state.selectedEntity
-                            state.isAlephDialogOpen = true
-                        },
-                        themeColors = themeColors
-                    )
-                }
+            }
+
+            // 🎛️ مركز التحكم الموحد - عمودي على الجانب (Vela 3D + OAM + AR VPS + Aleph Vision)
+            if (state.currentMapMode != MapMode.AR_VPS) {
+                MapControlCenter(
+                    currentMode = state.currentMapMode,
+                    onModeChange = { mode ->
+                        state.currentMapMode = mode
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("تم تفعيل ${mode.label} (${mode.icon})")
+                        }
+                    },
+                    tiltAngle = state.tiltAngle,
+                    onToggleTilt = {
+                        state.tiltAngle = if (state.tiltAngle > 0) 0f else 32f
+                    },
+                    onOpenAleph = {
+                        state.alephSelectedEntity = state.selectedEntity
+                        state.isAlephDialogOpen = true
+                    },
+                    themeColors = themeColors,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(top = 230.dp, start = 12.dp)
+                )
             }
 
             // Map Controls (Right / Floating)
@@ -434,6 +413,16 @@ fun MapScreenContent(
                     webViewRef?.post {
                         webViewRef?.evaluateJavascript(script, null)
                     }
+                    coroutineScope.launch {
+                        val layerName = when(layerKey) {
+                            "google_satellite" -> "الأقمار الصناعية"
+                            "osm" -> "خريطة الشوارع العادية"
+                            "navigation" -> "طبقة الملاحة والمسارات 🧭"
+                            "streets" -> "خرائط الطرق الرئيسية"
+                            else -> layerKey
+                        }
+                        snackbarHostState.showSnackbar("تم التبديل إلى: $layerName")
+                    }
                 },
                 onZoomIn = {
                     state.zoomScale = (state.zoomScale * 1.30f).coerceIn(0.25f, 8.0f)
@@ -442,7 +431,6 @@ fun MapScreenContent(
                     state.zoomScale = (state.zoomScale / 1.30f).coerceIn(0.25f, 8.0f)
                 },
                 onRecenterLocation = {
-                    // إصلاح 1.1: زر "موقعي" يعيد ضبط panOffset و zoomScale إلى موقع المستخدم الحالي فوراً
                     state.panOffset = Offset.Zero
                     state.zoomScale = 1.0f
                     val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -461,9 +449,9 @@ fun MapScreenContent(
                 isGpsActive = viewModel.isGpsTrackingActive.collectAsState().value,
                 themeColors = themeColors,
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
+                    .align(Alignment.TopEnd)
                     .navigationBarsPadding()
-                    .padding(bottom = if (state.selectedEntity != null) 200.dp else 20.dp)
+                    .padding(top = 230.dp, end = 12.dp, bottom = if (state.selectedEntity != null) 200.dp else 20.dp)
             )
 
             // Bottom Sheet for selected item
@@ -557,7 +545,7 @@ fun MapScreenContent(
             onDismiss = { state.isAlephDialogOpen = false },
             onOpenBooking = { target ->
                 state.isAlephDialogOpen = false
-                onRequestBooking(target)
+                target?.let { onRequestBooking(it) }
             },
             themeColors = themeColors
         )

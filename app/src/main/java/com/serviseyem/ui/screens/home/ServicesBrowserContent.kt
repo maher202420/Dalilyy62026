@@ -5,12 +5,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.serviseyem.data.*
-import com.serviseyem.ui.MainViewModel
+import com.serviseyem.ui.*
 import com.serviseyem.ui.screens.home.sections.ProvidersSectionView
 import com.serviseyem.utils.VisualThemePalette
 
 /**
- * 📱 ServicesBrowserContent - المحتوى التفاعلي وعرض قوائم الفنيين ومقدمي الخدمات
+ * 📱 ServicesBrowserMainContent - عرض بطائق مقدمي الخدمات فقط دون أي إضافات أسفلها
  */
 @Composable
 fun ServicesBrowserMainContent(
@@ -30,18 +30,23 @@ fun ServicesBrowserMainContent(
     onChatOpen: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ProvidersSectionView(
-        viewModel = viewModel,
-        themeColors = themeColors,
-        displayProviders = displayProviders,
-        isProvidersLoading = isProvidersLoading,
-        categories = categories,
-        selectedCategoryId = selectedCategoryId,
-        onCategorySelected = onCategorySelected,
-        providersLimit = providersLimit,
-        onLoadMore = onLoadMore,
-        onChatOpen = onChatOpen,
-        modifier = modifier
-    )
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // عرض بطائق مقدمي الخدمات والفنيين فقط دون أي أقسام أخرى أسفلها
+        ProvidersSectionView(
+            viewModel = viewModel,
+            themeColors = themeColors,
+            displayProviders = displayProviders,
+            isProvidersLoading = isProvidersLoading,
+            categories = categories,
+            selectedCategoryId = selectedCategoryId,
+            onCategorySelected = onCategorySelected,
+            providersLimit = providersLimit,
+            onLoadMore = onLoadMore,
+            onChatOpen = onChatOpen,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
-

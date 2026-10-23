@@ -1,6 +1,13 @@
 package com.serviseyem.ui.screens.entities
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import com.serviseyem.ui.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -71,22 +78,107 @@ fun ProfileTabContent(
                 }
                 ProfileEntityType.STORE, ProfileEntityType.RESTAURANT, ProfileEntityType.MEDICAL -> {
                     val storeProducts = products.filter { it.storeId == (store?.id ?: "") }
-                    if (storeProducts.isEmpty()) {
-                        EmptyStateBox("لا توجد أصناف مدرجة في القائمة حالياً.", themeColors)
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            storeProducts.chunked(2).forEach { rowPair ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    var selectedSubCategory by remember { mutableStateOf("الكل") }
+
+                    val subCats = remember(storeProducts) {
+                        val list = mutableListOf("الكل")
+                        storeProducts.forEach { p ->
+                            if (p.category.isNotBlank() && !list.contains(p.category)) {
+                                list.add(p.category)
+                            }
+                        }
+                        if (list.size == 1 && (store?.id == "store_demo_alyusri" || store?.name?.contains("بهارات") == true)) {
+                            listOf("الكل", "توابل مشكلة", "بهارات اللحوم", "بهارات شاي", "خلطات خاصة")
+                        } else {
+                            list
+                        }
+                    }
+
+                    val filteredProducts = remember(storeProducts, selectedSubCategory) {
+                        if (selectedSubCategory == "الكل") storeProducts
+                        else storeProducts.filter { it.category == selectedSubCategory }
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // Header: الأقسام والتصنيفات
+                        Text(
+                            text = "الأقسام والتصنيفات",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+
+                        // Circular Categories Row (Screenshot 2 Architecture)
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            items(subCats) { catName ->
+                                val isSelected = selectedSubCategory == catName
+                                val catEmoji = when {
+                                    catName == "الكل" -> "🏪"
+                                    catName.contains("مشكل") -> "🌶️"
+                                    catName.contains("لحوم") -> "🥩"
+                                    catName.contains("شاي") -> "☕"
+                                    catName.contains("خاص") -> "✨"
+                                    catName.contains("دجاج") -> "🍗"
+                                    catName.contains("عصير") -> "🍹"
+                                    catName.contains("حلى") -> "🍰"
+                                    catName.contains("أسنان") -> "🦷"
+                                    catName.contains("أطفال") -> "👶"
+                                    else -> "📦"
+                                }
+
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .clickable { selectedSubCategory = catName }
+                                        .padding(vertical = 2.dp)
                                 ) {
-                                    rowPair.forEach { prod ->
-                                        Box(modifier = Modifier.weight(1f)) {
-                                            ProfileProductCard(product = prod, themeColors = themeColors)
-                                        }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(if (isSelected) Color(0xFF2563EB) else Color(0xFF1E2D4A))
+                                            .border(
+                                                width = if (isSelected) 2.dp else 1.dp,
+                                                color = if (isSelected) Color(0xFF60A5FA) else Color(0xFF334155),
+                                                shape = androidx.compose.foundation.shape.CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = catEmoji, fontSize = 22.sp)
                                     }
-                                    if (rowPair.size == 1) {
-                                        Spacer(modifier = Modifier.weight(1f))
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = catName,
+                                        fontSize = 10.5.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color(0xFF60A5FA) else Color(0xFF94A3B8)
+                                    )
+                                }
+                            }
+                        }
+
+                        // 2-Column Product Grid
+                        if (filteredProducts.isEmpty()) {
+                            EmptyStateBox("لا توجد أصناف في هذا القسم حالياً.", themeColors)
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                filteredProducts.chunked(2).forEach { rowPair ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        rowPair.forEach { prod ->
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                ProfileProductCard(product = prod, themeColors = themeColors)
+                                            }
+                                        }
+                                        if (rowPair.size == 1) {
+                                            Spacer(modifier = Modifier.weight(1f))
+                                        }
                                     }
                                 }
                             }

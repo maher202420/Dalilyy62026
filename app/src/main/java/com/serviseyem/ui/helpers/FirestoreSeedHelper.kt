@@ -8,82 +8,55 @@ import com.google.firebase.firestore.FirebaseFirestore
 /**
  * Helper class to initialize and seed default Firestore collections if empty.
  */
-class FirestoreSeedHelper(private val db: FirebaseFirestore?) {
+class FirestoreSeedHelper(private val db: FirebaseFirestore) {
 
     private var isSeeded = false
 
-    fun seedFirestoreIfEmpty() {
-        if (isSeeded || db == null) return
+    fun seedFirestoreIfEmpty(force: Boolean = false) {
+        if (isSeeded && !force) return
         isSeeded = true
 
-        // Check and seed default configurations ONLY if the document genuinely does not exist in Firestore
+        android.util.Log.d("FirestoreSeedHelper", "🚀 Starting Firestore seed check (force=$force)...")
+
+        // Check and seed default configurations
         db.collection("settings").document("main_settings").get().addOnSuccessListener { doc ->
-            if (doc == null || !doc.exists()) {
-                db.collection("settings").document("main_settings").set(AdminSettingsEntity())
+            if (force || doc == null || !doc.exists()) {
+                android.util.Log.d("FirestoreSeedHelper", "📄 Seeding main_settings...")
+                db.collection("settings").document("main_settings").set(AdminSettingsEntity(), com.google.firebase.firestore.SetOptions.merge())
             }
         }
-        db.collection("categories").limit(20).get().addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val sn = task.result
-                if (sn == null || sn.isEmpty) {
-                    writeDefaultCategories()
-                }
-            } else {
-                try { writeDefaultCategories() } catch (e: Exception) {}
+
+        db.collection("categories").limit(1).get().addOnSuccessListener { sn ->
+            if (force || sn == null || sn.isEmpty) {
+                android.util.Log.d("FirestoreSeedHelper", "📂 Seeding categories...")
+                writeDefaultCategories()
             }
         }
-        db.collection("cities").limit(20).get().addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val sn = task.result
-                if (sn == null || sn.isEmpty) {
-                    writeDefaultCities()
-                }
-            } else {
-                try { writeDefaultCities() } catch (e: Exception) {}
+
+        db.collection("cities").limit(1).get().addOnSuccessListener { sn ->
+            if (force || sn == null || sn.isEmpty) {
+                android.util.Log.d("FirestoreSeedHelper", "🏙️ Seeding cities...")
+                writeDefaultCities()
             }
         }
-        db.collection("banners").limit(20).get().addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val sn = task.result
-                if (sn == null || sn.isEmpty) {
-                    writeDefaultBanners()
-                }
-            } else {
-                try { writeDefaultBanners() } catch (e: Exception) {}
-            }
-        }
-        db.collection("supervisors").limit(20).get().addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val sn = task.result
-                if (sn == null || sn.isEmpty) {
-                    writeDefaultSupervisors()
-                }
-            } else {
-                try { writeDefaultSupervisors() } catch (e: Exception) {}
-            }
-        }
-        db.collection("color_themes").limit(20).get().addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val sn = task.result
-                if (sn == null || sn.isEmpty) {
-                    writeDefaultColorPalettes()
-                }
-            } else {
-                try { writeDefaultColorPalettes() } catch (e: Exception) {}
-            }
-        }
-        db.collection("providers").limit(20).get().addOnCompleteListener { task ->
-            if (task.isSuccessful && (task.result == null || task.result!!.isEmpty)) {
+
+        db.collection("providers").limit(1).get().addOnSuccessListener { sn ->
+            if (force || sn == null || sn.isEmpty) {
+                android.util.Log.d("FirestoreSeedHelper", "👷 Seeding demo providers...")
                 writeDefaultProviders()
             }
         }
-        db.collection("stores").limit(20).get().addOnCompleteListener { task ->
-            if (task.isSuccessful && (task.result == null || task.result!!.isEmpty)) {
+
+        db.collection("stores").limit(1).get().addOnSuccessListener { sn ->
+            if (force || sn == null || sn.isEmpty) {
+                android.util.Log.d("FirestoreSeedHelper", "🏪 Seeding demo stores...")
                 writeDefaultStores()
             }
         }
-        db.collection("properties").limit(20).get().addOnCompleteListener { task ->
-            if (task.isSuccessful && (task.result == null || task.result!!.isEmpty)) {
+
+        db.collection("properties").limit(1).get().addOnSuccessListener { sn ->
+            if (force || sn == null || sn.isEmpty) {
+                android.util.Log.d("FirestoreSeedHelper", "🏠 Seeding demo properties...")
                 writeDefaultProperties()
             }
         }
@@ -200,19 +173,19 @@ class FirestoreSeedHelper(private val db: FirebaseFirestore?) {
 
     fun writeDefaultProviders() {
         com.serviseyem.data.helpers.DefaultDemoData.getDemoProviders().forEach { provider ->
-            db.collection("providers").document(provider.id).set(provider)
+            db.collection("providers").document(provider.id).set(provider, com.google.firebase.firestore.SetOptions.merge())
         }
     }
 
     fun writeDefaultStores() {
         com.serviseyem.data.helpers.DefaultDemoData.getDemoStores().forEach { store ->
-            db.collection("stores").document(store.id).set(store)
+            db.collection("stores").document(store.id).set(store, com.google.firebase.firestore.SetOptions.merge())
         }
     }
 
     fun writeDefaultProperties() {
         com.serviseyem.data.helpers.DefaultDemoData.getDemoProperties().forEach { prop ->
-            db.collection("properties").document(prop.id).set(prop)
+            db.collection("properties").document(prop.id).set(prop, com.google.firebase.firestore.SetOptions.merge())
         }
     }
 

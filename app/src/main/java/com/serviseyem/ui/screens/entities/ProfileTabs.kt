@@ -23,12 +23,12 @@ fun ProfileTabs(
 ) {
     val tabTitles = when (entityType) {
         ProfileEntityType.TECHNICIAN -> listOf("سابقة الأعمال 📸", "التقييمات والآراء ⭐", "شروط الضمان 🛡️")
-        ProfileEntityType.STORE -> listOf("الكتالوج والبضائع 📦", "العروض والخصومات 🏷️", "تقييمات المتجر ⭐")
-        ProfileEntityType.RESTAURANT -> listOf("منيو الأكلات 🍔", "العروض الخاصة 🎁", "آراء الذواقة ⭐")
-        ProfileEntityType.MEDICAL -> listOf("العيادات والتخصصات 🩺", "أوقات الدوام والطوارئ ⏰", "آراء المراجعين ⭐")
-        ProfileEntityType.REAL_ESTATE -> listOf("صور العقار والمخطط 📐", "المواصفات والخدمات 🏢", "معاينة وخريطة 🗺️")
-        ProfileEntityType.JOB -> listOf("شروط ومؤهلات الوظيفة 📋", "المزايا والحوافز 💰", "عن جهة العمل 🏢")
-        ProfileEntityType.GENERAL -> listOf("الخدمات 🛠️", "التقييمات ⭐", "معلومات التواصل 📞")
+        ProfileEntityType.STORE -> listOf("قائمة المنتجات", "التقييمات", "معلومات المتجر")
+        ProfileEntityType.RESTAURANT -> listOf("قائمة المنيو", "التقييمات", "معلومات المطعم")
+        ProfileEntityType.MEDICAL -> listOf("العيادات والخدمات", "التقييمات", "معلومات المركز")
+        ProfileEntityType.REAL_ESTATE -> listOf("الوحدات والمخطط", "المواصفات", "معاينة وخريطة")
+        ProfileEntityType.JOB -> listOf("شروط الوظيفة", "المزايا والحوافز", "عن جهة العمل")
+        ProfileEntityType.GENERAL -> listOf("الخدمات", "التقييمات", "معلومات التواصل")
     }
 
     TabRow(

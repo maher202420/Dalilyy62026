@@ -57,9 +57,6 @@ class SyncWorker(
             val queueSuccess = offlineQueue.processQueueSuspend()
 
             // 3. تنظيف الكاش المحلي والرسائل القديمة (>30 يوماً) لتوفير الذاكرة وسعة الجهاز
-            try {
-                com.serviseyem.data.local.ChatLocalDataSource.getInstance(applicationContext).pruneStaleCache()
-            } catch (_: Exception) {}
 
             if (queueSuccess) {
                 Result.success()

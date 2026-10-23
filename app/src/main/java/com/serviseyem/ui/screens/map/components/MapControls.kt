@@ -118,7 +118,62 @@ fun MapControls(
         }
 
 
-        // 4. Cloud Offline Cache Indicator Button (حفظ الأوفلاين)
+        // 4. Layer Switcher Button (تبديل الطبقات)
+        Surface(
+            shape = CircleShape,
+            color = Color(0xFF1E293B),
+            border = BorderStroke(1.dp, Color(0xFF334155)),
+            shadowElevation = 6.dp,
+            modifier = Modifier.size(46.dp)
+        ) {
+            IconButton(
+                onClick = {
+                    val nextLayer = when(currentLayer) {
+                        "google_satellite" -> "osm"
+                        "osm" -> "navigation"
+                        "navigation" -> "streets"
+                        else -> "google_satellite"
+                    }
+                    onSwitchLayer(nextLayer)
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("map_layer_switch_btn")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Layers,
+                    contentDescription = "تبديل طبقة الخريطة",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        // 4.5 Navigation Layer Direct Button (طبقة الملاحة)
+        Surface(
+            shape = CircleShape,
+            color = if (currentLayer == "navigation") Color(0xFF00E5FF).copy(alpha = 0.2f) else Color(0xFF1E293B),
+            border = BorderStroke(1.dp, if (currentLayer == "navigation") Color(0xFF00E5FF) else Color(0xFF334155)),
+            shadowElevation = 6.dp,
+            modifier = Modifier.size(46.dp)
+        ) {
+            IconButton(
+                onClick = { onSwitchLayer("navigation") },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("map_navigation_layer_btn")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Navigation,
+                    contentDescription = "طبقة الملاحة",
+                    tint = if (currentLayer == "navigation") Color(0xFF00E5FF) else Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+
+        // 5. Cloud Offline Cache Indicator Button (حفظ الأوفلاين)
         Surface(
             shape = CircleShape,
             color = Color(0xFF1E293B),

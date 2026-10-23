@@ -38,19 +38,17 @@ class MyApplication : Application() {
     }
 
     override fun onCreate() {
-        // [DIAGNOSTIC] Add global crash handler before anything else
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            val logFile = java.io.File(filesDir, "crash_log.txt")
-            logFile.appendText("CRASH at ${java.util.Date()}: ${throwable.stackTraceToString()}\n")
-            android.util.Log.e("CRASH_DIAGNOSTIC", "UNCAUGHT EXCEPTION", throwable)
-            // Call system handler to maintain default behavior
-            System.exit(2)
+            try {
+                val logFile = java.io.File(filesDir, "crash_log.txt")
+                logFile.appendText("CRASH at ${java.util.Date()}: ${throwable.stackTraceToString()}\n")
+            } catch (_: Exception) {}
+            android.util.Log.e("CRASH_DIAGNOSTIC", "UNCAUGHT EXCEPTION in thread ${thread.name}", throwable)
         }
         super.onCreate()
         instance = this
 
-        // ===================== الخطوة 1: تهيئة Firebase بأمان (تم التعطيل للاختبار) =====================
-        /*
+        // ===================== الخطوة 1: تهيئة Firebase بأمان =====================
         try {
             if (FirebaseApp.getApps(this).isEmpty()) {
                 FirebaseApp.initializeApp(this)
@@ -60,27 +58,21 @@ class MyApplication : Application() {
             Log.e("MyApplication", "❌ Firebase initialization failed: ${e.message}")
             e.printStackTrace()
         }
-        */
 
-        // ===================== تهيئة Firestore الموحدة (تم التعطيل للاختبار) =====================
-        /*
+        // ===================== تهيئة Firestore الموحدة =====================
         try {
             val firestore = FirebaseFirestore.getInstance()
             val settings = FirebaseFirestoreSettings.Builder()
                 .setPersistenceEnabled(true)
-                .setCacheSizeBytes(100 * 1024 * 1024L) // 🚨 M-06: 100MB limit to prevent storage bloat
+                .setCacheSizeBytes(100 * 1024 * 1024L) // 100MB limit to prevent storage bloat
                 .build()
             firestore.firestoreSettings = settings
             Log.d("MyApplication", "✅ FirebaseFirestore settings initialized successfully")
         } catch (e: Throwable) {
-            // تجاهل بأمان — قد تكون إعدادات Firestore مهيأة مسبقاً
             try {
-                Log.w("MyApplication", "⚠️ Firestore settings already initialized: ${e.message}")
-            } catch (e2: Throwable) {
-                e2.printStackTrace()
-            }
+                Log.w("MyApplication", "⚠️ Firestore settings notice: ${e.message}")
+            } catch (_: Throwable) {}
         }
-        */
 
         // ===================== الخطوة 2: تهيئة Analytics بأمان (تم التعطيل للاختبار) =====================
         /*

@@ -163,29 +163,26 @@ open class HomeViewModel @Inject constructor(
         val allProperties = appState._properties.value
         val allProducts = appState._products.value
 
-        if (query.isEmpty()) {
-            _filteredStores.value = emptyList<StoreEntity>()
-            _filteredProperties.value = emptyList<PropertyEntity>()
-        } else {
-            val matchedStoreIds = allProducts.filter { 
-                it.name.lowercase().contains(query) || it.description.lowercase().contains(query) 
-            }.map { it.storeId }.toSet()
+        val matchedStoreIds = if (query.isEmpty()) emptySet() else allProducts.filter { 
+            it.name.lowercase().contains(query) || it.description.lowercase().contains(query) 
+        }.map { it.storeId }.toSet()
 
-            _filteredStores.value = allStores.filter { s ->
-                s.name.lowercase().contains(query) ||
-                s.phone.contains(query) ||
-                s.categoryId.lowercase().contains(query) ||
-                matchedStoreIds.contains(s.id)
-            }.take(50)
+        _filteredStores.value = allStores.filter { s ->
+            query.isEmpty() ||
+            s.name.lowercase().contains(query) ||
+            s.phone.contains(query) ||
+            s.categoryId.lowercase().contains(query) ||
+            matchedStoreIds.contains(s.id)
+        }.take(50)
 
-            _filteredProperties.value = allProperties.filter { p ->
-                p.title.lowercase().contains(query) ||
-                p.phone.contains(query) ||
-                p.cityId.lowercase().contains(query) ||
-                p.localNeighborhood.lowercase().contains(query) ||
-                p.propertyType.lowercase().contains(query)
-            }.take(50)
-        }
+        _filteredProperties.value = allProperties.filter { p ->
+            query.isEmpty() ||
+            p.title.lowercase().contains(query) ||
+            p.phone.contains(query) ||
+            p.cityId.lowercase().contains(query) ||
+            p.localNeighborhood.lowercase().contains(query) ||
+            p.propertyType.lowercase().contains(query)
+        }.take(50)
 
         if (vipOnly) {
             filtered = filtered.filter { it.isVip || it.subscriptionStatus == "APPROVED" || it.subscriptionStatus == "ACCEPTED" }

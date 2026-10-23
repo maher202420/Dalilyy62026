@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import com.serviseyem.data.AdminSettingsEntity
 import com.serviseyem.data.ProviderEntity
 import com.serviseyem.data.StoreEntity
@@ -122,13 +123,14 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
             )
         }
         "EMERALD_YEMEN", "YEMEN_EMERALD" -> {
-            val primary = Color(0xFF0F766E)
-            val secondary = Color(0xFF115E59)
-            val background = Color(0xFF042F2E)
-            val surface = Color(0xFF0F766E)
-            val textPrimary = Color(0xFFF0FDF4)
-            val textSecondary = Color(0xFFCCFBF1)
-            val accent = Color(0xFF14B8A6)
+            val primary = Color(0xFF0C1628)
+            val secondary = Color(0xFF1E2D4A)
+            val background = Color(0xFF090E17) // Sophisticated modern dark navy background
+            val surface = Color(0xFF111C30) // Sleek dark card surface
+            val textPrimary = Color(0xFFFFFFFF) // Crisp high-contrast pure white
+            val textSecondary = Color(0xFF94A3B8) // Slate-400
+            val accent = Color(0xFFD4AF37) // Royal Gold
+            val border = Color(0xFF1E2E4A)
             VisualThemePalette(
                 activeId = "EMERALD_YEMEN",
                 primary = primary,
@@ -138,18 +140,28 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textPrimary = textPrimary,
                 textSecondary = textSecondary,
                 accent = accent,
-                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF115E59), Color(0xFF042F2E))),
-                scheme = darkColorScheme(primary = primary, secondary = secondary, background = background, surface = surface)
+                border = border,
+                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF111C30), Color(0xFF090E17))),
+                scheme = darkColorScheme(
+                    primary = primary,
+                    secondary = secondary,
+                    background = background,
+                    surface = surface,
+                    onPrimary = Color.White,
+                    onSecondary = Color.White,
+                    onBackground = Color.White,
+                    onSurface = Color.White
+                )
             )
         }
         "CUSTOM" -> {
-            val primary = parseColorSafely(settings.customPrimaryHex, Color(0xFF0F766E))
-            val secondary = parseColorSafely(settings.customSecondaryHex, Color(0xFF115E59))
-            val background = parseColorSafely(settings.customBackgroundHex, Color(0xFF042F2E))
-            val surface = parseColorSafely(settings.customSurfaceHex, Color(0xFF115E59))
-            val textPrimary = Color(0xFFF9FAFB)
-            val textSecondary = Color(0xFFE5E7EB)
-            val accent = primary
+            val primary = parseColorSafely(settings.customPrimaryHex, Color(0xFF0C1628))
+            val secondary = parseColorSafely(settings.customSecondaryHex, Color(0xFF1E2D4A))
+            val background = parseColorSafely(settings.customBackgroundHex, Color(0xFF090E17))
+            val surface = parseColorSafely(settings.customSurfaceHex, Color(0xFF111C30))
+            val textPrimary = Color(0xFFFFFFFF)
+            val textSecondary = Color(0xFF94A3B8)
+            val accent = Color(0xFFD4AF37)
             VisualThemePalette(
                 activeId = "CUSTOM",
                 primary = primary,
@@ -159,53 +171,33 @@ fun resolveThemePalette(settings: AdminSettingsEntity): VisualThemePalette {
                 textPrimary = textPrimary,
                 textSecondary = textSecondary,
                 accent = accent,
+                border = Color(0xFF1E2E4A),
                 gradientBrush = Brush.verticalGradient(listOf(surface, background)),
                 scheme = darkColorScheme(primary = primary, secondary = secondary, background = background, surface = surface)
             )
         }
         else -> {
-            // Check if there are custom hex colors specified, fall back to custom
-            if (settings.customPrimaryHex.startsWith("#") && settings.customBackgroundHex.startsWith("#")) {
-                val primary = parseColorSafely(settings.customPrimaryHex, Color(0xFF2563EB))
-                val secondary = parseColorSafely(settings.customSecondaryHex, Color(0xFF1D4ED8))
-                val background = parseColorSafely(settings.customBackgroundHex, Color(0xFF0F172A))
-                val surface = parseColorSafely(settings.customSurfaceHex, Color(0xFF1E293B))
-                val textPrimary = Color(0xFFF8FAFC)
-                val textSecondary = Color(0xFF94A3B8)
-                val accent = primary
-                VisualThemePalette(
-                    activeId = "CUSTOM",
-                    primary = primary,
-                    secondary = secondary,
-                    background = background,
-                    surface = surface,
-                    textPrimary = textPrimary,
-                    textSecondary = textSecondary,
-                    accent = accent,
-                    gradientBrush = Brush.verticalGradient(listOf(surface, background)),
-                    scheme = darkColorScheme(primary = primary, secondary = secondary, background = background, surface = surface)
-                )
-            } else {
-                val primary = Color(0xFFFF9800)
-                val secondary = Color(0xFF1A2128)
-                val background = Color(0xFF101418)
-                val surface = Color(0xFF1A2128)
-                val textPrimary = Color(0xFFFFFFFF)
-                val textSecondary = Color(0xFF9EA9B5)
-                val accent = Color(0xFFFF9800)
-                VisualThemePalette(
-                    activeId = "DEEP_SLATE_SUPERAPP",
-                    primary = primary,
-                    secondary = secondary,
-                    background = background,
-                    surface = surface,
-                    textPrimary = textPrimary,
-                    textSecondary = textSecondary,
-                    accent = accent,
-                    gradientBrush = Brush.verticalGradient(listOf(Color(0xFF1A2128), Color(0xFF101418))),
-                    scheme = darkColorScheme(primary = primary, secondary = secondary, background = background, surface = surface)
-                )
-            }
+            // Default: Sophisticated modern dark luxury theme (Screenshot 1)
+            val primary = Color(0xFF0C1628)
+            val secondary = Color(0xFF1E2D4A)
+            val background = Color(0xFF090E17)
+            val surface = Color(0xFF111C30)
+            val textPrimary = Color(0xFFFFFFFF)
+            val textSecondary = Color(0xFF94A3B8)
+            val accent = Color(0xFFD4AF37)
+            VisualThemePalette(
+                activeId = "YEMEN_DARK_LUXURY",
+                primary = primary,
+                secondary = secondary,
+                background = background,
+                surface = surface,
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                accent = accent,
+                border = Color(0xFF1E2E4A),
+                gradientBrush = Brush.verticalGradient(listOf(Color(0xFF111C30), Color(0xFF090E17))),
+                scheme = darkColorScheme(primary = primary, secondary = secondary, background = background, surface = surface)
+            )
         }
     }
 }
@@ -367,16 +359,18 @@ fun isMoreThan8HoursBefore(timestamp: Long): Boolean {
 }
 
 /**
- * ⏰ تنسيق ساعات العمل للغة العربية باتجاه RTL سليم تماماً
+ * ⏰ تنسيق ساعات العمل للغة العربية باتجاه RTL سليم وطبيعي (مثال: 9:00 ص - 10:00 م)
  */
 fun formatArabicWorkingHours(raw: String, defaultVal: String = "9:00 ص - 10:00 م"): String {
-    val input = raw.ifBlank { defaultVal }
-    val converted = input
-        .replace("AM", "ص")
-        .replace("PM", "م")
-        .replace("am", "ص")
-        .replace("pm", "م")
-    return "\u200F$converted"
+    if (raw.isBlank() || raw.equals("default", ignoreCase = true) || raw.contains("null")) {
+        return defaultVal
+    }
+    return raw.trim()
+        .replace("AM", "ص", ignoreCase = true)
+        .replace("PM", "م", ignoreCase = true)
+        .replace("to", "-", ignoreCase = true)
+        .replace("إلى", "-")
+        .trim()
 }
 
 /**
