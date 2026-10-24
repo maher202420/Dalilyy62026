@@ -122,6 +122,37 @@ fun AdminSystemSettingsScreenContent(
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                 )
+
+                var valhallaDownloadUrl by remember {
+                    mutableStateOf(
+                        context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
+                            .getString("valhalla_url", "https://github.com/maher202021/Vela2026/releases/download/yemen-valhalla-1/yemen_valhalla_tiles.zip") ?: ""
+                    )
+                }
+
+                OutlinedTextField(
+                    value = valhallaDownloadUrl,
+                    onValueChange = { valhallaDownloadUrl = it },
+                    label = { Text("🌐 رابط تحميل خرائط Valhalla الأوفلاين (Admin URL)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                )
+
+                Button(
+                    onClick = {
+                        context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("valhalla_url", valhallaDownloadUrl)
+                            .apply()
+                        Toast.makeText(context, "تم حفظ رابط Valhalla بنجاح ✓", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("حفظ رابط خرائط Valhalla المحدث", color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
         }
 

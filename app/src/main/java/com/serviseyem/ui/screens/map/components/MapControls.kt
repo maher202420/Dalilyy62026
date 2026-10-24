@@ -21,11 +21,6 @@ import com.serviseyem.utils.VisualThemePalette
 
 /**
  * 🎮 MapControls (مطابقة للشاشة والضوابط العائمة للخريطة)
- * أزرار تحكم عائمة بتصميم دائري داكن ومريح مطابق للشاشة المرفقة:
- * 1. زر تحديد وتوسيط موقع المستخدم (GPS Target)
- * 2. أزرار التكبير (+) والتصغير (-) التدريجي
- * 3. زر تخزين وتأكيد الأوفلاين (Cloud Offline Cache)
- * 4. زر التبديل بين الرادار والخريطة
  */
 @Composable
 fun MapControls(
@@ -33,11 +28,12 @@ fun MapControls(
     onToggleRadarMode: () -> Unit,
     isHeatmapActive: Boolean,
     onToggleHeatmap: () -> Unit,
-    currentLayer: String = "satellite", // [إصلاح نهائي]
+    currentLayer: String = "satellite",
     onSwitchLayer: (String) -> Unit,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
     onRecenterLocation: () -> Unit,
+    onDownloadValhallaClick: () -> Unit = {},
     isGpsActive: Boolean,
     themeColors: VisualThemePalette,
     modifier: Modifier = Modifier
@@ -48,7 +44,7 @@ fun MapControls(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 1. Recenter Location Button (GPS Target - أعلى المجموعة كالصورة)
+        // 1. Recenter Location Button (GPS Target)
         Surface(
             shape = CircleShape,
             color = Color(0xFF0F242A),
@@ -117,7 +113,6 @@ fun MapControls(
             }
         }
 
-
         // 4. Layer Switcher Button (تبديل الطبقات)
         Surface(
             shape = CircleShape,
@@ -172,6 +167,28 @@ fun MapControls(
             }
         }
 
+        // 4.6 Download Full Navigation Tiles (تحميل الملاحة الكاملة أوفلاين)
+        Surface(
+            shape = CircleShape,
+            color = Color(0xFF0F242A),
+            border = BorderStroke(1.5.dp, Color(0xFF00E5FF)),
+            shadowElevation = 6.dp,
+            modifier = Modifier.size(46.dp)
+        ) {
+            IconButton(
+                onClick = onDownloadValhallaClick,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("download_valhalla_btn")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = "تحميل الملاحة الكاملة أوفلاين (25MB)",
+                    tint = Color(0xFF00E5FF),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
 
         // 5. Cloud Offline Cache Indicator Button (حفظ الأوفلاين)
         Surface(

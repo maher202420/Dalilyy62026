@@ -72,6 +72,10 @@ fun MapScreenContent(
     var showMapErrorOverlay by remember { mutableStateOf(false) }
     var mapRetryCount by remember { mutableIntStateOf(0) }
     var webViewRef by remember { mutableStateOf<android.webkit.WebView?>(null) }
+    var showValhallaDialog by remember { mutableStateOf(false) }
+    var isDownloadingValhalla by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableFloatStateOf(0f) }
+    var downloadStatusText by remember { mutableStateOf("") }
 
     androidx.activity.compose.BackHandler(enabled = true) {
         if (state.selectedEntity != null) {
@@ -447,6 +451,7 @@ fun MapScreenContent(
                     }
                 },
                 isGpsActive = viewModel.isGpsTrackingActive.collectAsState().value,
+                onDownloadValhallaClick = { showValhallaDialog = true },
                 themeColors = themeColors,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -558,6 +563,63 @@ fun MapScreenContent(
             viewModel = viewModel,
             themeColors = themeColors,
             onDismiss = { state.bookingProviderTarget = null }
+        )
+    }
+
+    // 📥 Valhalla Offline Navigation Download Dialog
+    if (showValhallaDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isDownloadingValhalla) showValhallaDialog = false },
+            title = { Text("📥 تحميل الملاحة الدقيقة الكاملة (أوفلاين)", fontWeight = FontWeight.Bold, color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("لتفعيل الملاحة الدقيقة والمسارات التفصيلية داخل شوارع اليمن، يحتاج التطبيق إلى تحميل ملف خرائط أوفلاين (حوالي 25 ميجابايت). يُنصح باستخدام شبكة Wi-Fi.", fontSize = 12.sp, color = Color.LightGray)
+                    
+                    if (isDownloadingValhalla) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { downloadProgress },
+                            modifier = Modifier.fillMaxWidth().height(8.dp),
+                            color = Color(0xFF00E5FF),
+                            trackColor = Color(0xFF1E293B)
+                        )
+                        Text(downloadStatusText, fontSize = 11.sp, color = Color(0xFF00E5FF))
+                    }
+                }
+            },
+            confirmButton = {
+                if (!isDownloadingValhalla) {
+                    Button(
+                        onClick = {
+                            isDownloadingValhalla = true
+                            downloadStatusText = "جاري بدء التحميل..."
+                            coroutineScope.launch {
+                                val prefs = context.getSharedPreferences("valhalla_prefs", android.content.Context.MODE_PRIVATE)
+                                val adminUrl = prefs.getString("valhalla_url", "") ?: ""
+                                val success = com.serviseyem.utils.ValhallaDownloadManager.downloadAndExtractOfflineTiles(context, adminUrl) { prog, msg ->
+                                    downloadProgress = prog
+                                    downloadStatusText = msg
+                                }
+                                isDownloadingValhalla = false
+                                showValhallaDialog = false
+                                snackbarHostState.showSnackbar(if (success) "تم تحميل وتفعيل الملاحة الدقيقة بنجاح ✓" else "فشل التحميل، يرجى التحقق من الاتصال")
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                    ) {
+                        Text("تحميل الآن", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                if (!isDownloadingValhalla) {
+                    TextButton(onClick = { showValhallaDialog = false }) {
+                        Text("لاحقاً", color = Color.Gray)
+                    }
+                }
+            },
+            containerColor = Color(0xFF0F172A),
+            shape = RoundedCornerShape(16.dp)
         )
     }
 }
